@@ -17,7 +17,7 @@ typedef enum
   RESET_ERROR,
   SIZE_ERROR,
   CRC_ERROR,
-}BootloaderError_t;
+} BootloaderError_t;
 
 void Jump_To_Application(void);
 int Bootloader_Is_App_Valid(void);

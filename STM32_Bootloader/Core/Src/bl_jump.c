@@ -6,8 +6,8 @@
  */
 
 #include "main.h"
-#include "flash_layout.h"
 #include "bl_jump.h"
+#include "flash_layout.h"
 #include "app_header.h"
 #include "crc32.h"
 
