@@ -21,7 +21,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "bl_jump.h"
+#include "bl_ota.h"
+#include "flash_layout.h"
+#include "app_header.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,7 +59,27 @@ static void MX_SPI2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static uint32_t mem_base = APP_START_ADDR;
+static uint32_t mem_cursor = 0;
+static uint32_t ota_image_total_size = 16;
 
+void ota_mem_set_total_size(uint32_t size)
+{
+    ota_image_total_size = size;
+}
+
+int ota_read_mem(uint8_t *buf, uint32_t len)
+{
+    if (mem_cursor + len > ota_image_total_size)
+        return -1;
+
+    uint8_t *flash_ptr = (uint8_t *)(mem_base + mem_cursor);
+
+    memcpy(buf, flash_ptr, len);
+
+    mem_cursor += len;
+    return 0;
+}
 /* USER CODE END 0 */
 
 /**
