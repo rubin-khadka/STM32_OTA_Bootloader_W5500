@@ -1,0 +1,8 @@
+# STM32 Project - Git Ignore
+
+.metadata/
+
+.settings/
+Debug/
+
+.mxproject
