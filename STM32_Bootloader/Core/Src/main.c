@@ -24,8 +24,10 @@
 #include "bl_jump.h"
 #include "bl_ota.h"
 #include "w25q64.h"
-#include <string.h>
+
 #include "usart1.h"
+
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -117,7 +119,7 @@ int main(void)
 
   USART1_Init();
 
-  USART1_SendString("Bootloader Started !!!\r\n");
+  USART1_SendString("\r\nBootloader Started !!!\r\n");
 
   // W25Q64 Flash Initialize
   W25Q_Reset();
