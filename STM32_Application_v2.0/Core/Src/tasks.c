@@ -9,10 +9,11 @@
 #include "dht11.h"
 #include "dwt.h"
 #include "lcd.h"
+#include "mpu6050.h"
 #include "ds3231.h"
 #include "button.h"
-#include "timer2.h"
 #include "utils.h"
+#include "timer2.h"
 
 #define MAX_RETRIES 5
 
@@ -85,6 +86,14 @@ void Task_LCD_Update(void)
       LCD_DisplayReading_Temp(dht11_temperature1, dht11_temperature2, dht11_humidity1, dht11_humidity2);
       break;
 
+    case DISPLAY_MODE_ACCEL:
+      LCD_DisplayAccelScaled(mpu6050_scaled.accel_x, mpu6050_scaled.accel_y, mpu6050_scaled.accel_z);
+      break;
+
+    case DISPLAY_MODE_GYRO:
+      LCD_DisplayGyroScaled(mpu6050_scaled.gyro_x, mpu6050_scaled.gyro_y, mpu6050_scaled.gyro_z);
+      break;
+
     case DISPLAY_MODE_DATE_TIME:
       // Get current time
       if(DS3231_GetTime(&current_time) == DS3231_OK)
@@ -120,6 +129,15 @@ void Task_LCD_Update(void)
 
     default:  // Handles DISPLAY_MODE_COUNT and any invalid values
       break;
+  }
+}
+
+// Task to read MPU6050 sensor
+void Task_MPU6050_Read(void)
+{
+  if(MPU6050_ReadAll() == I2C_OK)
+  {
+    MPU6050_ScaleAll();
   }
 }
 

@@ -13,6 +13,8 @@ typedef enum
 {
   DISPLAY_MODE_TEMP_HUM = 0,  // DHT11 temperature and humidity
   DISPLAY_MODE_DATE_TIME,     // DS3231 Date and Time
+  DISPLAY_MODE_ACCEL,         // MPU6050 accelerometer
+  DISPLAY_MODE_GYRO,          // MPU6050 gyroscope
   DISPLAY_MODE_COUNT
 } DisplayMode_t;
 
@@ -23,9 +25,5 @@ void TIMER4_Init(void);
 // Display swap mode functions
 DisplayMode_t Button_GetMode(void);
 void Button_NextMode(void);
-
-// OTA trigger functions
-uint8_t Button_IsOTATriggered(void);
-void Button_ClearOTATrigger(void);
 
 #endif /* BUTTON_H_ */

@@ -84,7 +84,6 @@ static void MX_SPI2_Init(void);
 /* USER CODE BEGIN 0 */
 
 extern volatile uint8_t ota_begin;
-extern volatile uint8_t ota_active;
 
 /* USER CODE END 0 */
 
@@ -205,20 +204,38 @@ int main(void)
       HAL_Delay(1);
     }
 
-    // Read DHT11 every 1 seconds
-    if(dht_count++ >= DHT11_READ_TICKS)
+    // Only update sensors and normal display if NOT in OTA mode
+    if(ota_active == 0 && ota_status_stage != OTA_STAGE_ERROR && ota_status_stage != OTA_STAGE_COMPLETE)
     {
-      dht_count = 0;
-      Task_DHT11_Read();
-    }
-
-    // Update LCD every 100ms
-    if(lcd_count++ >= LCD_UPDATE_TICKS)
-    {
-      lcd_count = 0;
-      if(ota_active == 0)
+      // Read DHT11 every 1 seconds
+      if(dht_count++ >= DHT11_READ_TICKS)
       {
+        dht_count = 0;
+        Task_DHT11_Read();
+      }
+
+      // Update LCD every 100ms
+      if(lcd_count++ >= LCD_UPDATE_TICKS)
+      {
+        lcd_count = 0;
         Task_LCD_Update();
+      }
+    }
+    else if(ota_status_stage == OTA_STAGE_ERROR)
+    {
+      // If OTA error occurred, wait a bit then clear error state
+      static uint32_t error_wait = 0;
+      if(error_wait == 0)
+      {
+        error_wait = HAL_GetTick();
+      }
+
+      if((HAL_GetTick() - error_wait) > 2000)
+      {  // Show error for 2 seconds
+        ota_status_stage = 0;
+        error_wait = 0;
+        LCD_Clear();
+        Task_LCD_Update();  // Restore normal display
       }
     }
 

@@ -249,3 +249,65 @@ void LCD_DisplayFloat(float value, uint8_t decimal_places)
     LCD_SendData('0' + frac_part);
   }
 }
+
+// Display scaled accelerometer data on LCD
+void LCD_DisplayAccelScaled(float ax, float ay, float az)
+{
+  // Line 1: AX and AY with units
+  LCD_SetCursor(0, 0);
+  LCD_SendString("AX:");
+  LCD_DisplayFloat(ax, 2);  // 2 decimal places
+  LCD_SendData(' ');
+  LCD_SendData(' ');
+  LCD_SendData(' ');
+
+  LCD_SetCursor(0, 8);
+  LCD_SendString("AY:");
+  LCD_DisplayFloat(ay, 2);
+  LCD_SendData(' ');
+  LCD_SendData(' ');
+
+  // Line 2: AZ
+  LCD_SetCursor(1, 0);
+  LCD_SendString("AZ:");
+  LCD_DisplayFloat(az, 2);
+  LCD_SendData(' ');
+  LCD_SendData(' ');
+
+  LCD_SendString("[g]");
+  LCD_SendData(' ');
+  LCD_SendData(' ');
+  LCD_SendData(' ');
+  LCD_SendData(' ');
+}
+
+// Display scaled gyroscope data on LCD
+void LCD_DisplayGyroScaled(float gx, float gy, float gz)
+{
+  // Line 1: GX and GY with units
+  LCD_SetCursor(0, 0);
+  LCD_SendString("GX:");
+  LCD_DisplayFloat(gx, 2);  // 2 decimal place for gyro
+  LCD_SendData(' ');
+  LCD_SendData(' ');
+  LCD_SendData(' ');
+
+  LCD_SetCursor(0, 8);
+  LCD_SendString("GY:");
+  LCD_DisplayFloat(gy, 2);
+  LCD_SendData(' ');
+  LCD_SendData(' ');
+  LCD_SendData(' ');
+
+  // Line 2: GZ
+  LCD_SetCursor(1, 0);
+  LCD_SendString("GZ:");
+  LCD_DisplayFloat(gz, 2);
+  LCD_SendData(' ');
+  LCD_SendData(' ');
+
+  LCD_SendString("[dps]");
+  LCD_SendData(' ');
+  LCD_SendData(' ');
+}
+

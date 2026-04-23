@@ -16,6 +16,7 @@
 #include "app_ota.h"
 #include "usart1.h"
 #include "w25q64.h"
+#include "lcd.h"
 
 /* ================= CONFIG ================= */
 #define SERVER_IP           {192, 168, 1, 2}  // PC IP address
@@ -28,9 +29,21 @@
 #define OTA_ACK_CHUNK       512
 #define OTA_FLASH_OFFSET    0       // Start of W25Q64
 
+/* ================= OTA STAGES ================= */
+#define OTA_STAGE_IDLE        0
+#define OTA_STAGE_CONNECTING  1
+#define OTA_STAGE_RECEIVING   2
+#define OTA_STAGE_WRITING     3
+#define OTA_STAGE_VERIFYING   4
+#define OTA_STAGE_COMPLETE    5
+#define OTA_STAGE_ERROR       6
+
 /* ========================================== */
 static uint8_t server_ip[4];
 volatile uint8_t ota_active = 0;
+volatile uint8_t ota_status_stage = OTA_STAGE_IDLE;
+volatile uint32_t ota_progress_current = 0;
+volatile uint32_t ota_progress_total = 0;
 
 /* OTA state variables */
 static uint8_t rx_buf[OTA_RX_BUF_SIZE];
@@ -59,6 +72,133 @@ static uint32_t last_bytes_received = 0;
 static void ota_process_rx(uint8_t *data, uint16_t len);
 static void ota_finalize(void);
 static void ota_error(void);
+
+/* ================= LCD DISPLAY FUNCTIONS ================= */
+
+static void LCD_DisplayOTAMessage(uint8_t stage)
+{
+  LCD_Clear();
+  LCD_SetCursor(0, 0);
+
+  switch(stage)
+  {
+    case OTA_STAGE_CONNECTING:
+      LCD_SendString("OTA Update");
+      LCD_SetCursor(1, 0);
+      LCD_SendString("Connecting...");
+      break;
+    case OTA_STAGE_RECEIVING:
+      LCD_SendString("OTA Update");
+      LCD_SetCursor(1, 0);
+      LCD_SendString("Receiving FW...");
+      break;
+    case OTA_STAGE_WRITING:
+      LCD_SendString("OTA Update");
+      LCD_SetCursor(1, 0);
+      LCD_SendString("Writing Flash...");
+      break;
+    case OTA_STAGE_VERIFYING:
+      LCD_SendString("OTA Update");
+      LCD_SetCursor(1, 0);
+      LCD_SendString("Verifying...");
+      break;
+    case OTA_STAGE_COMPLETE:
+      LCD_SendString("OTA Complete!");
+      LCD_SetCursor(1, 0);
+      LCD_SendString("Resetting...");
+      break;
+    case OTA_STAGE_ERROR:
+      LCD_SendString("OTA FAILED!");
+      LCD_SetCursor(1, 0);
+      LCD_SendString("See USART...");
+      break;
+    default:
+      LCD_SendString("OTA Update");
+      LCD_SetCursor(1, 0);
+      LCD_SendString("Processing...");
+      break;
+  }
+}
+
+static void LCD_DisplayOTAProgress(uint32_t current, uint32_t total)
+{
+  uint8_t percentage;
+  uint8_t bars;
+
+  if(total > 0)
+  {
+    percentage = (current * 100) / total;
+  }
+  else
+  {
+    percentage = 0;
+  }
+
+  // Calculate progress bars (16 characters max)
+  bars = (percentage * 16) / 100;
+
+  // Show percentage on top line at column 8
+  LCD_SetCursor(0, 10);
+
+  // Format percentage (e.g., "45%")
+  if(percentage < 10)
+  {
+    LCD_SendData(' ');
+    LCD_SendData(' ');
+    LCD_SendData('0' + percentage);
+  }
+  else if(percentage < 100)
+  {
+    LCD_SendData(' ');
+    LCD_SendData('0' + (percentage / 10));
+    LCD_SendData('0' + (percentage % 10));
+  }
+  else
+  {
+    LCD_SendData('0' + (percentage / 100));
+    LCD_SendData('0' + ((percentage / 10) % 10));
+    LCD_SendData('0' + (percentage % 10));
+  }
+  LCD_SendData('%');
+
+  // Draw progress bar on line 2
+  LCD_SetCursor(1, 0);
+  for(uint8_t i = 0; i < bars; i++)
+  {
+    LCD_SendData(0xFF);  // Full block character
+  }
+  for(uint8_t i = bars; i < 16; i++)
+  {
+    LCD_SendData(' ');   // Space
+  }
+}
+
+static void LCD_DisplayOTAError(uint8_t error_type)
+{
+  LCD_Clear();
+  LCD_SetCursor(0, 0);
+  LCD_SendString("OTA FAILED!");
+
+  LCD_SetCursor(1, 0);
+  switch(error_type)
+  {
+    case 1:
+      LCD_SendString("Connect Error");
+      break;
+    case 2:
+      LCD_SendString("Flash Error");
+      break;
+    case 3:
+      LCD_SendString("CRC Error");
+      break;
+    case 4:
+      LCD_SendString("Timeout");
+      break;
+    default:
+      LCD_SendString("Unknown Error");
+      break;
+  }
+}
 
 /* ================= W25Q64 OTA HELPERS ================= */
 
@@ -130,7 +270,7 @@ static uint8_t ota_write(uint32_t addr, uint8_t *buf, size_t len)
     return 0;
   }
 
-  DEBUG_STR_LN("✓ Write verified");
+  DEBUG_STR_LN("Write verified");
   return 1;
 }
 
@@ -150,8 +290,14 @@ static void ota_process_rx(uint8_t *data, uint16_t len)
   /* Erase flash once at start */
   if(!flash_erased)
   {
+    ota_status_stage = OTA_STAGE_WRITING;
+    LCD_DisplayOTAMessage(ota_status_stage);
+
     erase_ota_flash();
     flash_erased = 1;
+
+    ota_status_stage = OTA_STAGE_RECEIVING;
+    LCD_DisplayOTAMessage(ota_status_stage);
   }
 
   /* ---------------- Parse OTA header ---------------- */
@@ -174,6 +320,9 @@ static void ota_process_rx(uint8_t *data, uint16_t len)
       offset += hdr_bytes_needed;
       bytes_received += hdr_bytes_needed;
       header_received = 1;
+
+      // Set total size for progress display
+      ota_progress_total = ota_hdr.image_size + OTA_HEADER_SIZE;
 
       DEBUG_STR("OTA header received: magic=0x");
       for(int i = 0; i < 4; i++)
@@ -243,6 +392,10 @@ static void ota_process_rx(uint8_t *data, uint16_t len)
 
   bytes_in_current_chunk += len;
   total_received = bytes_received;
+
+  // Update progress display
+  ota_progress_current = bytes_received;
+  LCD_DisplayOTAProgress(ota_progress_current, ota_progress_total);
 
   DEBUG_STR("Progress: ");
   DEBUG_NUM(bytes_received);
@@ -330,13 +483,13 @@ int8_t OTA_Client_Init(void)
   DEBUG_STR_LN(" ...");
 
   // Connect with retries
-  int retries = 5;
+  int retries = 2;
   do
   {
     ret = connect(CLIENT_SOCKET, server_ip, SERVER_PORT);
     status = getSn_SR(CLIENT_SOCKET);
 
-    uint32_t max_wait_ms = 5000;
+    uint32_t max_wait_ms = 2000;
     uint32_t start = HAL_GetTick();
     while(((HAL_GetTick() - start) < max_wait_ms) && (status != SOCK_ESTABLISHED))
     {
@@ -456,6 +609,10 @@ void OTA_Client_Task(void)
 
 void ota_start(void)
 {
+  // Set connecting stage
+  ota_status_stage = OTA_STAGE_CONNECTING;
+  LCD_DisplayOTAMessage(ota_status_stage);
+
   // Initialize W25Q64 first
   DEBUG_STR_LN("\n========================================");
   DEBUG_STR_LN("Starting W5500 OTA Client");
@@ -474,6 +631,8 @@ void ota_start(void)
   if(flash_id != 0xEF4017)
   {
     DEBUG_STR_LN("ERROR: Wrong flash ID! Expected 0xEF4017");
+    ota_status_stage = OTA_STAGE_ERROR;
+    LCD_DisplayOTAError(2);
     return;
   }
   DEBUG_STR_LN("W25Q64 detected OK\n");
@@ -482,13 +641,15 @@ void ota_start(void)
   if(W5500_Init() != 0)
   {
     DEBUG_STR_LN("W5500 initialization failed!");
+    ota_status_stage = OTA_STAGE_ERROR;
+    LCD_DisplayOTAError(1);
     return;
   }
 
   HAL_Delay(2000);  // Let PHY stabilize
 
   // Connect to server
-  uint8_t retries = 5;
+  uint8_t retries = 2;
   do
   {
     if(OTA_Client_Init() == 0)
@@ -507,6 +668,13 @@ void ota_start(void)
       last_progress_tick = HAL_GetTick();
       last_bytes_received = 0;
 
+      // Reset progress tracking
+      ota_progress_current = 0;
+      ota_progress_total = 0;
+
+      ota_status_stage = OTA_STAGE_RECEIVING;
+      LCD_DisplayOTAMessage(ota_status_stage);
+
       DEBUG_STR_LN("\nOTA active, waiting for firmware...\n");
       break;
     }
@@ -518,6 +686,8 @@ void ota_start(void)
   if(!ota_active)
   {
     DEBUG_STR_LN("Failed to connect to server!");
+    ota_status_stage = OTA_STAGE_ERROR;
+    LCD_DisplayOTAError(1);
   }
 }
 
@@ -525,6 +695,9 @@ void ota_start(void)
 
 static void ota_finalize(void)
 {
+  ota_status_stage = OTA_STAGE_VERIFYING;
+  LCD_DisplayOTAMessage(ota_status_stage);
+
   DEBUG_STR_LN("\n========================================");
   DEBUG_STR_LN("OTA completed successfully!");
   DEBUG_STR_LN("========================================\n");
@@ -545,10 +718,16 @@ static void ota_finalize(void)
     DEBUG_STR("Firmware size: ");
     DEBUG_NUM(verify_hdr.image_size);
     DEBUG_STR_LN("");
+
+    ota_status_stage = OTA_STAGE_COMPLETE;
+    LCD_DisplayOTAMessage(ota_status_stage);
   }
   else
   {
     DEBUG_STR_LN("WARNING: Firmware verification FAILED!");
+    ota_status_stage = OTA_STAGE_ERROR;
+    LCD_DisplayOTAError(3);
+    HAL_Delay(3000);
   }
 
   // Set bootloader flag
@@ -569,6 +748,9 @@ static void ota_error(void)
   DEBUG_STR_LN("OTA ERROR! Update failed.");
   DEBUG_STR_LN("========================================\n");
 
+  ota_status_stage = OTA_STAGE_ERROR;
+  LCD_DisplayOTAError(4);
+
   disconnect(CLIENT_SOCKET);
   close(CLIENT_SOCKET);
   ota_active = 0;
@@ -576,4 +758,14 @@ static void ota_error(void)
 
   // Don't set bootloader flag, just resume application
   DEBUG_STR_LN("Resuming application without OTA...");
+
+  // After 3 seconds, return to normal display
+  HAL_Delay(3000);
+
+  // Clear OTA error and let main loop resume
+  ota_status_stage = OTA_STAGE_IDLE;
+
+  // Force a refresh of the normal display
+  extern void Task_LCD_Update(void);
+  Task_LCD_Update();
 }

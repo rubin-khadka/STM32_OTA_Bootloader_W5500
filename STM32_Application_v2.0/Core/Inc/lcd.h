@@ -25,5 +25,7 @@ void LCD_SetCursor(uint8_t row, uint8_t col);
 
 // Functions to display scaled values
 void LCD_DisplayReading_Temp(uint8_t temp_int, uint8_t temp_dec, uint8_t hum_int, uint8_t hum_dec);
+void LCD_DisplayAccelScaled(float ax, float ay, float az);
+void LCD_DisplayGyroScaled(float gx, float gy, float gz);
 
 #endif /* LCD_H_ */

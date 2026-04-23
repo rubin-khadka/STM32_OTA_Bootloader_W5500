@@ -39,6 +39,7 @@
 #include "dht11.h"
 #include "ds3231.h"
 #include "button.h"
+#include "mpu6050.h"
 
 #include "tasks.h"
 
@@ -59,6 +60,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+#define MPU_READ_TICKS        5
 #define DHT11_READ_TICKS      100
 #define LCD_UPDATE_TICKS      10
 /* USER CODE END PM */
@@ -78,13 +80,12 @@ static void MX_SPI1_Init(void);
 static void MX_SPI2_Init(void);
 /* USER CODE BEGIN PFP */
 
+extern volatile uint8_t ota_begin;
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-extern volatile uint8_t ota_begin;
-extern volatile uint8_t ota_active;
 
 /* USER CODE END 0 */
 
@@ -173,16 +174,19 @@ int main(void)
   // Initialize sensors
   DS3231_Init();
   DHT11_Init();
+  MPU6050_Init();
 
   // Loop counters
   uint16_t dht_count = 0;
   uint16_t lcd_count = 0;
+  uint16_t mpu_count = 0;
 
   Button_Init();
 
   TIMER2_Delay_ms(2000);
 
   TIMER3_SetupPeriod(10);  // 10ms period
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -205,20 +209,45 @@ int main(void)
       HAL_Delay(1);
     }
 
-    // Read DHT11 every 1 seconds
-    if(dht_count++ >= DHT11_READ_TICKS)
+    // Only update sensors and normal display if NOT in OTA mode
+    if(ota_active == 0 && ota_status_stage != OTA_STAGE_ERROR && ota_status_stage != OTA_STAGE_COMPLETE)
     {
-      dht_count = 0;
-      Task_DHT11_Read();
-    }
-
-    // Update LCD every 100ms
-    if(lcd_count++ >= LCD_UPDATE_TICKS)
-    {
-      lcd_count = 0;
-      if(ota_active == 0)
+      // Read DHT11 every 1 seconds
+      if(dht_count++ >= DHT11_READ_TICKS)
       {
+        dht_count = 0;
+        Task_DHT11_Read();
+      }
+
+      // Read MPU6050 every 50ms
+      if(mpu_count++ >= MPU_READ_TICKS)
+      {
+        mpu_count = 0;
+        Task_MPU6050_Read();
+      }
+
+      // Update LCD every 100ms
+      if(lcd_count++ >= LCD_UPDATE_TICKS)
+      {
+        lcd_count = 0;
         Task_LCD_Update();
+      }
+    }
+    else if(ota_status_stage == OTA_STAGE_ERROR)
+    {
+      // If OTA error occurred, wait a bit then clear error state
+      static uint32_t error_wait = 0;
+      if(error_wait == 0)
+      {
+        error_wait = HAL_GetTick();
+      }
+
+      if((HAL_GetTick() - error_wait) > 2000)
+      {  // Show error for 2 seconds
+        ota_status_stage = 0;
+        error_wait = 0;
+        LCD_Clear();
+        Task_LCD_Update();  // Restore normal display
       }
     }
 
@@ -263,6 +292,10 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
+  /** Enables the Clock Security System
+   */
+  HAL_RCC_EnableCSS();
 }
 
 /**
@@ -354,26 +387,15 @@ static void MX_GPIO_Init(void)
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, RESET_Pin | CS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SS_GPIO_Port, SS_Pin, GPIO_PIN_SET);
-
-  /*Configure GPIO pin : PC15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_15;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : RESET_Pin CS_Pin */
   GPIO_InitStruct.Pin = RESET_Pin | CS_Pin;

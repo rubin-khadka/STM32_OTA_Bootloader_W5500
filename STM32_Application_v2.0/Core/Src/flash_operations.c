@@ -6,6 +6,7 @@
  */
 
 #include "main.h"
+#include "ota_tcp_server.h"
 #include "flash_operations.h"
 #include "flash_layout.h"
 #include "string.h"
