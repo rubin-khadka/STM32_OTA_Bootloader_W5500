@@ -10,8 +10,6 @@
 
 #include "flash_layout.h"
 
-#define APP_MAGIC 0xABCDEFAB
-
 typedef struct
 {
   uint32_t ota_flag;
