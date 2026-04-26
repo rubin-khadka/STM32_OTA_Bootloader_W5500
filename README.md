@@ -47,6 +47,8 @@ Shows Hercules UART debug and PC server running, waiting for confirmation from t
 
 <img width="1512" height="752" alt="Schematic Diagram" src="https://github.com/user-attachments/assets/a18a1107-f437-4b55-bfec-7237480d4d15" />
 
+<img width="833" height="787" alt="flow_chart" src="https://github.com/user-attachments/assets/81d5e0d6-7353-48c7-b9e9-f183b75fba01" />
+
 
 ## Pin Configuration
 
