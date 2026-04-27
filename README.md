@@ -155,7 +155,7 @@ This polynomial (`0xEDB88320`) is the standard CRC-32 used in protocols like Eth
 
 ## OTA Update Flowchart
 
-<img width="592" height="632" alt="flow_chart" src="https://github.com/user-attachments/assets/441bc6af-e110-4874-8bce-a0ce6dfe96b9" />
+<img width="1081" height="1104" alt="flow chart" src="https://github.com/user-attachments/assets/6cf2fa4c-92f4-4e1e-a4d5-d2d6c586ce5b" />
 
 ## Related Projects 
 - [STM32_MicroSD_Cloud_Logger](https://github.com/rubin-khadka/STM32_MicroSD_Cloud_Logger)
