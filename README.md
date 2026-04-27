@@ -28,7 +28,6 @@ The application is a simplified version of the [Multi Sensor Cloud Logger Projec
 - DS3231 - Real Time Clock
 A 16x2 LCD display shows sensor values, and a push button cycles through different display modes.
 
-
 ## Video Demonstrations
 
 ### Hardware Demo
