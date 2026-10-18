@@ -1,7 +1,7 @@
 /*
  * ds3231.c
  *
- *  Created on: Mar 5, 2026
+ *  Created on: Aug 18, 2026
  *      Author: Rubin Khadka
  */
 
@@ -11,10 +11,6 @@
 DS3231_Time_t current_time;
 
 // Internal helper functions
-static uint8_t DS3231_WriteReg(uint8_t reg, uint8_t data);
-static uint8_t DS3231_ReadReg(uint8_t reg, uint8_t *data);
-static uint8_t DS3231_WriteMulti(uint8_t reg, uint8_t *data, uint8_t len);
-static uint8_t DS3231_ReadMulti(uint8_t reg, uint8_t *data, uint8_t len);
 
 // Initialize DS3231
 uint8_t DS3231_Init(void)
@@ -43,10 +39,10 @@ uint8_t DS3231_Init(void)
     // Set initial time (only on first power-up or after battery failure)
     current_time.seconds = 00;
     current_time.minutes = 00;
-    current_time.hour = 22;
+    current_time.hour = 14;
     current_time.dayofweek = 5;
-    current_time.dayofmonth = 17;
-    current_time.month = 04;
+    current_time.dayofmonth = 22;
+    current_time.month = 10;
     current_time.year = 26;  // 2026
 
     DS3231_SetTime(&current_time);
@@ -125,9 +121,10 @@ float DS3231_GetTemperature(void)
     return 0.0f;
 
   // Temperature format:
-  // MSB = integer part, LSB bits 7-6 = fractional (0.25°C steps)
-  temperature = (float) temp_msb;
-  temperature += ((float) (temp_lsb >> 6)) * 0.25f;
+  // MSB = integer part (two's complement)
+  // LSB bits 7-6 = fractional (0.25°C steps)
+  temperature = (float) ((int8_t) temp_msb);
+  temperature += ((float) ((temp_lsb >> 6) & 0x03)) * 0.25f;
 
   return temperature;
 }
@@ -141,7 +138,7 @@ uint8_t DS3231_ForceTempConv(void)
   if(DS3231_ReadReg(DS3231_REG_STATUS, &status) != DS3231_OK)
     return DS3231_ERROR;
 
-  // Check if conversion is already in progress (BSY bit)
+  // Check if conversion is already in progress (BSY bit, bit 2)
   if(!(status & 0x04))
   {
     // Read control register
@@ -198,14 +195,15 @@ uint8_t DS3231_SetAlarm2(uint8_t hour, uint8_t min, uint8_t mode)
 }
 
 // Write a single register on DS3231
-
-static uint8_t DS3231_WriteReg(uint8_t reg, uint8_t data)
+uint8_t DS3231_WriteReg(uint8_t reg, uint8_t data)
 {
-  uint8_t result;
+  I2C_Status result;
 
-  I2C2_Start();
+  result = I2C2_Start();
+  if(result != I2C_OK)
+    return DS3231_ERROR;
 
-  result = I2C2_SendAddr(DS3231_ADDR, I2C_WRITE);
+  result = I2C2_SendAddr(DS3231_ADDR, 0U);  // Write mode
   if(result != I2C_OK)
   {
     I2C2_Stop();
@@ -213,14 +211,16 @@ static uint8_t DS3231_WriteReg(uint8_t reg, uint8_t data)
   }
 
   // Send register address
-  if(I2C2_WriteByte(reg) != I2C_OK)
+  result = I2C2_WriteByte(reg);
+  if(result != I2C_OK)
   {
     I2C2_Stop();
     return DS3231_ERROR;
   }
 
   // Send data
-  if(I2C2_WriteByte(data) != I2C_OK)
+  result = I2C2_WriteByteWaitComplete(data);
+  if(result != I2C_OK)
   {
     I2C2_Stop();
     return DS3231_ERROR;
@@ -231,56 +231,28 @@ static uint8_t DS3231_WriteReg(uint8_t reg, uint8_t data)
 }
 
 // Read a single register from DS3231
-static uint8_t DS3231_ReadReg(uint8_t reg, uint8_t *data)
+uint8_t DS3231_ReadReg(uint8_t reg, uint8_t *data)
 {
-  uint8_t result;
-
-  // Start condition
-  I2C2_Start();
-
-  // Send device address with write bit to set register pointer
-  result = I2C2_SendAddr(DS3231_ADDR, I2C_WRITE);
-  if(result != I2C_OK)
+  // Use ReadBurst for single byte read
+  if(I2C2_ReadBurst(DS3231_ADDR, reg, data, 1) != I2C_OK)
   {
-    I2C2_Stop();
     return DS3231_ERROR;
   }
-
-  // Send register address to read from
-  if(I2C2_WriteByte(reg) != I2C_OK)
-  {
-    I2C2_Stop();
-    return DS3231_ERROR;
-  }
-
-  // Restart condition to switch to read mode
-  I2C2_Start();
-
-  // Send device address with read bit
-  result = I2C2_SendAddr(DS3231_ADDR, I2C_READ);
-  if(result != I2C_OK)
-  {
-    I2C2_Stop();
-    return DS3231_ERROR;
-  }
-
-  // Read data with NACK (last byte)
-  *data = I2C2_ReadByte(0);  // 0 = NACK
-
-  I2C2_Stop();
 
   return DS3231_OK;
 }
 
 // Write multiple registers starting from 'reg'
-static uint8_t DS3231_WriteMulti(uint8_t reg, uint8_t *data, uint8_t len)
+uint8_t DS3231_WriteMulti(uint8_t reg, uint8_t *data, uint8_t len)
 {
-  uint8_t result;
+  I2C_Status result;
   uint8_t i;
 
-  I2C2_Start();
+  result = I2C2_Start();
+  if(result != I2C_OK)
+    return DS3231_ERROR;
 
-  result = I2C2_SendAddr(DS3231_ADDR, I2C_WRITE);
+  result = I2C2_SendAddr(DS3231_ADDR, 0U);  // Write mode
   if(result != I2C_OK)
   {
     I2C2_Stop();
@@ -288,7 +260,8 @@ static uint8_t DS3231_WriteMulti(uint8_t reg, uint8_t *data, uint8_t len)
   }
 
   // Send starting register address
-  if(I2C2_WriteByte(reg) != I2C_OK)
+  result = I2C2_WriteByte(reg);
+  if(result != I2C_OK)
   {
     I2C2_Stop();
     return DS3231_ERROR;
@@ -297,7 +270,8 @@ static uint8_t DS3231_WriteMulti(uint8_t reg, uint8_t *data, uint8_t len)
   // Send all data bytes
   for(i = 0; i < len; i++)
   {
-    if(I2C2_WriteByte(data[i]) != I2C_OK)
+    result = I2C2_WriteByteWaitComplete(data[i]);
+    if(result != I2C_OK)
     {
       I2C2_Stop();
       return DS3231_ERROR;
@@ -309,56 +283,13 @@ static uint8_t DS3231_WriteMulti(uint8_t reg, uint8_t *data, uint8_t len)
 }
 
 // Read multiple registers starting from 'reg'
-static uint8_t DS3231_ReadMulti(uint8_t reg, uint8_t *data, uint8_t len)
+uint8_t DS3231_ReadMulti(uint8_t reg, uint8_t *data, uint8_t len)
 {
-  uint8_t result;
-  uint8_t i;
-
-  // Start condition
-  I2C2_Start();
-
-  // Send device address with write bit to set register pointer
-  result = I2C2_SendAddr(DS3231_ADDR, I2C_WRITE);
-  if(result != I2C_OK)
+  // Use ReadBurst for multi-byte read
+  if(I2C2_ReadBurst(DS3231_ADDR, reg, data, len) != I2C_OK)
   {
-    I2C2_Stop();
     return DS3231_ERROR;
   }
-
-  // Send starting register address
-  if(I2C2_WriteByte(reg) != I2C_OK)
-  {
-    I2C2_Stop();
-    return DS3231_ERROR;
-  }
-
-  // Restart condition to switch to read mode
-  I2C2_Start();
-
-  // Send device address with read bit
-  result = I2C2_SendAddr(DS3231_ADDR, I2C_READ);
-  if(result != I2C_OK)
-  {
-    I2C2_Stop();
-    return DS3231_ERROR;
-  }
-
-  // Read all bytes (with ACK for all but last)
-  for(i = 0; i < len; i++)
-  {
-    if(i == (len - 1))
-    {
-      // Last byte, send NACK
-      data[i] = I2C2_ReadByte(0);
-    }
-    else
-    {
-      // All other bytes, send ACK
-      data[i] = I2C2_ReadByte(1);
-    }
-  }
-
-  I2C2_Stop();
 
   return DS3231_OK;
 }
