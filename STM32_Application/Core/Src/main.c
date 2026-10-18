@@ -104,8 +104,8 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  SCB->VTOR = APP_START_ADDR;
-  __enable_irq();
+//  SCB->VTOR = APP_START_ADDR;
+//  __enable_irq();
   /* USER CODE END Init */
 
   /* Configure the system clock */
