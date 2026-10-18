@@ -18,7 +18,7 @@
 #define I2C_READ        1
 
 void    I2C2_Init(void);
-void    I2C2_Start(void);
+uint8_t I2C2_Start(void);
 void    I2C2_Stop(void);
 uint8_t I2C2_SendAddr(uint8_t addr, uint8_t rw);
 uint8_t I2C2_WriteByte(uint8_t data);

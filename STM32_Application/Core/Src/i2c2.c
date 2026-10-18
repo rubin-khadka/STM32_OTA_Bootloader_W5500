@@ -3,187 +3,240 @@
  *
  *  Created on: Feb 26, 2026
  *      Author: Rubin Khadka
+ *
  */
 
 #include "stm32f103xb.h"
 #include "i2c2.h"
+#include <stddef.h>
 
+#define I2C_LOOPS  10000U
+
+/* ---------------------------------------------------------------- */
 void I2C2_Init(void)
 {
-  // Enable Clocks
   RCC->APB2ENR |= RCC_APB2ENR_IOPBEN | RCC_APB2ENR_AFIOEN;
-
-  // Enable I2C2 peripheral
   RCC->APB1ENR |= RCC_APB1ENR_I2C2EN;
 
-  // GPIO Configuration for I2C2
-  // PB10 SCL
-  GPIOB->CRH &= ~(GPIO_CRH_CNF10 | GPIO_CRH_MODE10);
-  GPIOB->CRH |= GPIO_CRH_MODE10_1;      // 2 MHz output
-  GPIOB->CRH |= GPIO_CRH_CNF10_0 | GPIO_CRH_CNF10_1;  // Alternate function open drain
+  /* PB10 SCL, PB11 SDA : AF open-drain, 2 MHz */
+  GPIOB->CRH &= ~(GPIO_CRH_CNF10 | GPIO_CRH_MODE10 |
+                  GPIO_CRH_CNF11 | GPIO_CRH_MODE11);
+  GPIOB->CRH |=  (GPIO_CRH_MODE10_1 | GPIO_CRH_CNF10_0 | GPIO_CRH_CNF10_1);
+  GPIOB->CRH |=  (GPIO_CRH_MODE11_1 | GPIO_CRH_CNF11_0 | GPIO_CRH_CNF11_1);
 
-  // PB11 SDA
-  GPIOB->CRH &= ~(GPIO_CRH_CNF11 | GPIO_CRH_MODE11);
-  GPIOB->CRH |= GPIO_CRH_MODE11_1;      // 2 MHz output
-  GPIOB->CRH |= GPIO_CRH_CNF11_0 | GPIO_CRH_CNF11_1;  // Alternate function open drain
-
-  // I2C Configuration
-  // Reset I2C2
-  I2C2->CR1 |= I2C_CR1_SWRST;
-  for(volatile int i = 0; i < 100; i++);
+  /* Soft-reset — PE must be 0 before SWRST */
+  I2C2->CR1 &= ~I2C_CR1_PE;
+  I2C2->CR1 |=  I2C_CR1_SWRST;
+  for (volatile int i = 0; i < 100; i++);
   I2C2->CR1 &= ~I2C_CR1_SWRST;
 
-  // APB1 Clock Speed
-  I2C2->CR2 |= 36;  // 36 MHz
+  /* 100 kHz standard mode, PCLK1 = 36 MHz */
+  I2C2->CR2   = 36U;
+  I2C2->CCR   = 180U;   /* 36 MHz / (2 × 100 kHz) */
+  I2C2->TRISE = 37U;
 
-  // Configure for 100kHz I2C
-  // CCR = APB1 clock / (2 * desired speed) for standard mode
-  I2C2->CCR = 180;        // 36MHz / (2 * 100kHz) = 180
-
-  // TRISE = APB1 clock in MHz + 1
-  I2C2->TRISE = 37;
-
-  // Set duty cycle
-  I2C2->CCR &= ~I2C_CCR_DUTY;
-
-  // Disable general call, no stretch, dual address disable
   I2C2->CR1 &= ~(I2C_CR1_ENGC | I2C_CR1_NOSTRETCH);
-
-  // Set own address to 0
   I2C2->OAR1 = 0x4000;
-
-  // Enable I2C with ACK
   I2C2->CR1 |= I2C_CR1_PE | I2C_CR1_ACK;
 }
 
-void I2C2_Start(void)
+/* ---------------------------------------------------------------- */
+uint8_t I2C2_Start(void)
 {
-  uint32_t timeout = 10000;
+  uint32_t timeout = I2C_LOOPS;
 
-  // Wait for bus to be free
-  while(I2C2->SR2 & I2C_SR2_BUSY)
-  {
-    if(--timeout == 0)
-      break;
-  }
+  while (I2C2->SR2 & I2C_SR2_BUSY)
+    if (--timeout == 0U) return I2C_ERROR;
 
-  // Generate start condition
   I2C2->CR1 |= I2C_CR1_START;
 
-  // Wait for start condition generated (SB bit)
-  timeout = 10000;
-  while(!(I2C2->SR1 & I2C_SR1_SB))
-  {
-    if(--timeout == 0)
-      break;
-  }
+  timeout = I2C_LOOPS;
+  while (!(I2C2->SR1 & I2C_SR1_SB))
+    if (--timeout == 0U) return I2C_ERROR;
+
+  return I2C_OK;
 }
 
+/* ---------------------------------------------------------------- */
+uint8_t I2C2_RepeatedStart(void)
+{
+  uint32_t timeout = I2C_LOOPS;
+
+  I2C2->CR1 |= I2C_CR1_START;
+
+  while (!(I2C2->SR1 & I2C_SR1_SB))
+    if (--timeout == 0U) return I2C_ERROR;
+
+  return I2C_OK;
+}
+
+/* ---------------------------------------------------------------- */
 void I2C2_Stop(void)
 {
-  // Generate stop condition
   I2C2->CR1 |= I2C_CR1_STOP;
 
-  // Small delay to let STOP complete
-  for(volatile int i = 0; i < 100; i++);
+  uint32_t timeout = I2C_LOOPS;
+  while (I2C2->SR2 & I2C_SR2_BUSY)
+    if (--timeout == 0U) break;
 }
 
+/* ---------------------------------------------------------------- */
 uint8_t I2C2_SendAddr(uint8_t addr, uint8_t rw)
 {
-  uint32_t timeout = 10000;
+  uint32_t timeout = I2C_LOOPS;
 
-  // Clear any pending acknowledge failure
   I2C2->SR1 &= ~I2C_SR1_AF;
+  I2C2->DR   = (uint8_t)((addr << 1U) | (rw & 0x01U));
 
-  // Send address (shifted left 1 bit + R/W bit)
-  I2C2->DR = (addr << 1) | rw;
-
-  // Wait for ADDR flag (address sent and ACK received)
-  while(!(I2C2->SR1 & I2C_SR1_ADDR))
+  while (!(I2C2->SR1 & I2C_SR1_ADDR))
   {
-    // Check for acknowledge failure
-    if(I2C2->SR1 & I2C_SR1_AF)
-    {
-      return I2C_ERROR;  // No ACK from device
-    }
-
-    if(--timeout == 0)
-    {
-      return I2C_TIMEOUT;
-    }
+    if (I2C2->SR1 & I2C_SR1_AF)   { I2C2->CR1 |= I2C_CR1_STOP; return I2C_ERROR; }
+    if (--timeout == 0U)          { I2C2->CR1 |= I2C_CR1_STOP; return I2C_TIMEOUT; }
   }
 
-  // Clear ADDR flag by reading SR2 register
-  (void) I2C2->SR2;
-
+  (void) I2C2->SR1;   /* ADDR-clear sequence: read SR1 */
+  (void) I2C2->SR2;   /*                     then SR2 */
   return I2C_OK;
 }
 
+/* ---------------------------------------------------------------- */
 uint8_t I2C2_WriteByte(uint8_t data)
 {
-  uint32_t timeout = 10000;
+  uint32_t timeout = I2C_LOOPS;
 
-  // Wait for TXE flag (data register empty)
-  while(!(I2C2->SR1 & I2C_SR1_TXE))
+  while (!(I2C2->SR1 & I2C_SR1_TXE))
   {
-    // Check for acknowledge failure
-    if(I2C2->SR1 & I2C_SR1_AF)
-    {
-      return I2C_ERROR;
-    }
-
-    if(--timeout == 0)
-    {
-      return I2C_TIMEOUT;
-    }
+    if (I2C2->SR1 & I2C_SR1_AF) { I2C2->CR1 |= I2C_CR1_STOP; return I2C_ERROR; }
+    if (--timeout == 0U)        { I2C2->CR1 |= I2C_CR1_STOP; return I2C_TIMEOUT; }
   }
 
-  // Send data
   I2C2->DR = data;
-
-  // Wait for byte to be transmitted (TXE set again)
-  timeout = 10000;
-  while(!(I2C2->SR1 & I2C_SR1_TXE))
-  {
-    // Check for acknowledge failure
-    if(I2C2->SR1 & I2C_SR1_AF)
-    {
-      return I2C_ERROR;
-    }
-
-    if(--timeout == 0)
-    {
-      return I2C_TIMEOUT;
-    }
-  }
-
   return I2C_OK;
 }
 
-uint8_t I2C2_ReadByte(uint8_t ack)
+/* ---------------------------------------------------------------- */
+uint8_t I2C2_WriteByteWaitComplete(uint8_t data)
 {
-  uint32_t timeout = 10000;
+  uint8_t st = I2C2_WriteByte(data);
+  if (st != I2C_OK) return st;
 
-  // Configure ACK/NACK for this byte
-  if(ack)
+  uint32_t timeout = I2C_LOOPS;
+  while (!(I2C2->SR1 & I2C_SR1_BTF))
   {
-    I2C2->CR1 |= I2C_CR1_ACK;   // Send ACK after receiving
+    if (I2C2->SR1 & I2C_SR1_AF) { I2C2->CR1 |= I2C_CR1_STOP; return I2C_ERROR; }
+    if (--timeout == 0U)        { I2C2->CR1 |= I2C_CR1_STOP; return I2C_TIMEOUT; }
+  }
+  return I2C_OK;
+}
+
+/* ---------------------------------------------------------------- */
+static void I2C2_Abort(void)
+{
+  I2C2->CR1 &= ~I2C_CR1_POS;
+  I2C2->CR1 |=  I2C_CR1_STOP;
+
+  uint32_t timeout = I2C_LOOPS;
+  while ((I2C2->SR2 & I2C_SR2_BUSY) && --timeout) { }
+}
+
+/* ---------------------------------------------------------------- */
+uint8_t I2C2_ReadBurst(uint8_t devAddr, uint8_t regAddr,
+                       uint8_t *buf, uint8_t len)
+{
+  uint8_t  st;
+  uint32_t timeout;
+
+  if (len == 0U || buf == NULL) return I2C_ERROR;
+
+  /* Register pointer */
+  st = I2C2_Start();                          if (st) { I2C2_Abort(); return st; }
+  st = I2C2_SendAddr(devAddr, I2C_WRITE);     if (st) { I2C2_Abort(); return st; }
+  st = I2C2_WriteByteWaitComplete(regAddr);   if (st) { I2C2_Abort(); return st; }
+
+  /* Repeated START + read address */
+  st = I2C2_RepeatedStart();                  if (st) { I2C2_Abort(); return st; }
+  st = I2C2_SendAddr(devAddr, I2C_READ);      if (st) { I2C2_Abort(); return st; }
+
+  if (len == 1U)
+  {
+    /* NACK + STOP before the byte arrives */
+    I2C2->CR1 &= ~I2C_CR1_ACK;
+    I2C2->CR1 |=  I2C_CR1_STOP;
+
+    timeout = I2C_LOOPS;
+    while (!(I2C2->SR1 & I2C_SR1_RXNE))
+      if (--timeout == 0U) { I2C2_Abort(); return I2C_TIMEOUT; }
+
+    buf[0] = (uint8_t) I2C2->DR;
+  }
+  else if (len == 2U)
+  {
+    /* POS = 1 : NACK byte 1, STOP after byte 2 */
+    I2C2->CR1 |=  I2C_CR1_POS;
+    I2C2->CR1 &= ~I2C_CR1_ACK;
+
+    timeout = I2C_LOOPS;
+    while (!(I2C2->SR1 & I2C_SR1_BTF))
+      if (--timeout == 0U) { I2C2_Abort(); return I2C_TIMEOUT; }
+
+    I2C2->CR1 |= I2C_CR1_STOP;
+    buf[0] = (uint8_t) I2C2->DR;
+    buf[1] = (uint8_t) I2C2->DR;
+    I2C2->CR1 &= ~I2C_CR1_POS;
   }
   else
   {
-    I2C2->CR1 &= ~I2C_CR1_ACK;  // Send NACK after receiving
-  }
+    uint8_t i;
 
-  // Wait for RXNE flag (data received)
-  while(!(I2C2->SR1 & I2C_SR1_RXNE))
-  {
-    if(--timeout == 0)
+    for (i = 0U; i < (uint8_t)(len - 3U); i++)
     {
-      return 0;
+      timeout = I2C_LOOPS;
+      while (!(I2C2->SR1 & I2C_SR1_RXNE))
+        if (--timeout == 0U) { I2C2_Abort(); return I2C_TIMEOUT; }
+      buf[i] = (uint8_t) I2C2->DR;
     }
+
+    /* BTF: byte N-2 in DR, byte N-1 in shift register */
+    timeout = I2C_LOOPS;
+    while (!(I2C2->SR1 & I2C_SR1_BTF))
+      if (--timeout == 0U) { I2C2_Abort(); return I2C_TIMEOUT; }
+
+    I2C2->CR1 &= ~I2C_CR1_ACK;
+    buf[len - 3U] = (uint8_t) I2C2->DR;
+
+    timeout = I2C_LOOPS;
+    while (!(I2C2->SR1 & I2C_SR1_RXNE))
+      if (--timeout == 0U) { I2C2_Abort(); return I2C_TIMEOUT; }
+    buf[len - 2U] = (uint8_t) I2C2->DR;
+
+    I2C2->CR1 |= I2C_CR1_STOP;
+
+    timeout = I2C_LOOPS;
+    while (!(I2C2->SR1 & I2C_SR1_RXNE))
+      if (--timeout == 0U) { I2C2_Abort(); return I2C_TIMEOUT; }
+    buf[len - 1U] = (uint8_t) I2C2->DR;
   }
 
-  // Read received data
-  return I2C2->DR;
+  return I2C_OK;
 }
 
+/* ---------------------------------------------------------------- */
+uint8_t I2C2_ReadByte(uint8_t ack)
+{
+  uint32_t timeout = I2C_LOOPS;
+
+  if (ack)
+  {
+    I2C2->CR1 |= I2C_CR1_ACK;
+  }
+  else
+  {
+    I2C2->CR1 &= ~I2C_CR1_ACK;
+    I2C2->CR1 |=  I2C_CR1_STOP;
+  }
+
+  while (!(I2C2->SR1 & I2C_SR1_RXNE))
+    if (--timeout == 0U) return 0xFF;
+
+  return (uint8_t) I2C2->DR;
+}
