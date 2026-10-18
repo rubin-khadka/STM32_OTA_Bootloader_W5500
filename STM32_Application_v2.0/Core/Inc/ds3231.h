@@ -1,12 +1,12 @@
 /*
  * ds3231.h
  *
- *  Created on: Mar 5, 2026
+ *  Created on: Aug 18, 2026
  *      Author: Rubin Khadka
  */
 
-#ifndef DS3231_H_
-#define DS3231_H_
+#ifndef INC_DS3231_H_
+#define INC_DS3231_H_
 
 #include "stdint.h"
 
@@ -36,13 +36,13 @@
 
 // Time structure
 typedef struct {
-    uint8_t seconds;      // 0-59
-    uint8_t minutes;      // 0-59
-    uint8_t hour;         // 0-23
-    uint8_t dayofweek;    // 1-7 (1 = Sunday)
-    uint8_t dayofmonth;   // 1-31
-    uint8_t month;        // 1-12
-    uint8_t year;         // 0-99 (2000-2099)
+  uint8_t seconds;      // 0-59
+  uint8_t minutes;      // 0-59
+  uint8_t hour;         // 0-23
+  uint8_t dayofweek;    // 1-7 (1 = Sunday)
+  uint8_t dayofmonth;   // 1-31
+  uint8_t month;        // 1-12
+  uint8_t year;         // 0-99 (2000-2099)
 } DS3231_Time_t;
 
 extern DS3231_Time_t current_time;
@@ -61,4 +61,9 @@ uint8_t DS3231_CheckOscillatorStop(void);
 uint8_t DS3231_DecToBcd(uint8_t val);
 uint8_t DS3231_BcdToDec(uint8_t val);
 
-#endif /* DS3231_H_ */
+uint8_t DS3231_WriteReg(uint8_t reg, uint8_t data);
+uint8_t DS3231_ReadReg(uint8_t reg, uint8_t *data);
+uint8_t DS3231_WriteMulti(uint8_t reg, uint8_t *data, uint8_t len);
+uint8_t DS3231_ReadMulti(uint8_t reg, uint8_t *data, uint8_t len);
+
+#endif /* INC_DS3231_H_ */
