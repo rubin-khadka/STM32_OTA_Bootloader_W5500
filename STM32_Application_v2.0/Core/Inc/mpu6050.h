@@ -1,17 +1,15 @@
 /*
  * mpu6050.h
  *
- *  Created on: Feb 21, 2026
+ *  Created on: Aug 24, 2026
  *      Author: Rubin Khadka
  */
 
-#ifndef MPU6050_H_
-#define MPU6050_H_
+#ifndef INC_MPU6050_H_
+#define INC_MPU6050_H_
 
-#include "stm32f103xb.h"
-#include "stdint.h"
+#include <stdint.h>
 
-// MPU6050 I2C address (7-bit)
 #define MPU6050_ADDR    0x69
 
 // Register addresses
@@ -82,4 +80,4 @@ float MPU6050_ConvertTemp(int16_t raw_temp);
 float MPU6050_ConvertAccel(int16_t raw_accel);
 float MPU6050_ConvertGyro(int16_t raw_gyro);
 
-#endif /* MPU6050_H_ */
+#endif /* INC_MPU6050_H_ */
