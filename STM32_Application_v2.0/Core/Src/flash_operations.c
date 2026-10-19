@@ -43,22 +43,36 @@ uint32_t flash_erase_app(void)
 //    return error;
 //}
 
+#include "string.h"
+
+/* Return 0 on success, non-zero error code on failure */
 uint32_t flash_erase_header(void)
 {
   FLASH_EraseInitTypeDef erase;
-  uint32_t error;
+  uint32_t page_error = 0xFFFFFFFF;
 
-  erase.TypeErase = FLASH_TYPEERASE_PAGES;
+  memset(&erase, 0, sizeof(erase));   /* ← zero ALL fields */
+  erase.TypeErase   = FLASH_TYPEERASE_PAGES;
   erase.PageAddress = APP_HEADER_ADDR;
-  erase.NbPages = 1;
+  erase.NbPages     = 1;
 
-  HAL_FLASHEx_Erase(&erase, &error);
-  return error;
+  HAL_StatusTypeDef st = HAL_FLASHEx_Erase(&erase, &page_error);
+  if (st != HAL_OK)  return 0x1000 | st;
+  if (page_error != 0xFFFFFFFF) return 0x2000 | (page_error & 0xFF);
+  return 0;
 }
 
+/* Return 0 on success, non-zero on failure */
+uint32_t flash_write_word_checked(uint32_t addr, uint32_t data)
+{
+  HAL_StatusTypeDef st = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, addr, (uint64_t)data);
+  return (st == HAL_OK) ? 0 : (0x3000 | st);
+}
+
+/* Keep original void wrapper for any callers that don't check */
 void flash_write_word(uint32_t addr, uint32_t data)
 {
-  HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, addr, data);
+  (void)flash_write_word_checked(addr, data);
 }
 
 void flash_write_bytes(uint32_t addr, uint8_t *buf, uint32_t len)
