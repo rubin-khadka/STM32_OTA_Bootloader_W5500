@@ -693,6 +693,67 @@ void ota_start(void)
 
 /* ================= OTA FINALIZE & ERROR ================= */
 
+//static void ota_finalize(void)
+//{
+//  ota_status_stage = OTA_STAGE_VERIFYING;
+//  LCD_DisplayOTAMessage(ota_status_stage);
+//
+//  DEBUG_STR_LN("\n========================================");
+//  DEBUG_STR_LN("OTA completed successfully!");
+//  DEBUG_STR_LN("========================================\n");
+//
+//  // Close connection
+//  disconnect(CLIENT_SOCKET);
+//  close(CLIENT_SOCKET);
+//  ota_active = 0;
+//
+//  // Verify the written firmware one more time
+//  DEBUG_STR_LN("Verifying firmware in W25Q64...");
+//  ota_image_hdr_t verify_hdr;
+//  W25Q_Read(0, (uint8_t*) &verify_hdr, sizeof(ota_image_hdr_t));
+//
+//  if(verify_hdr.magic == APP_MAGIC)
+//  {
+//    DEBUG_STR_LN("Firmware verification PASSED!");
+//    DEBUG_STR("Firmware size: ");
+//    DEBUG_NUM(verify_hdr.image_size);
+//    DEBUG_STR_LN("");
+//
+//    ota_status_stage = OTA_STAGE_COMPLETE;
+//    LCD_DisplayOTAMessage(ota_status_stage);
+//  }
+//  else
+//  {
+//    DEBUG_STR_LN("WARNING: Firmware verification FAILED!");
+//    ota_status_stage = OTA_STAGE_ERROR;
+//    LCD_DisplayOTAError(3);
+//    HAL_Delay(3000);
+//  }
+//
+//  enable_ota_request();
+//  HAL_Delay(200);
+//
+//  NVIC_SystemReset();
+//}
+static void uart_puts(const char *s)
+{
+  while(*s)
+  {
+    while(!(USART1->SR & USART_SR_TXE));
+    USART1->DR = *s++;
+  }
+}
+
+static void uart_put_u32(uint32_t v)
+{
+  const char hex[] = "0123456789ABCDEF";
+  for(int i = 28; i >= 0; i -= 4)
+  {
+    while(!(USART1->SR & USART_SR_TXE));
+    USART1->DR = hex[(v >> i) & 0xF];
+  }
+}
+
 static void ota_finalize(void)
 {
   ota_status_stage = OTA_STAGE_VERIFYING;
@@ -730,14 +791,34 @@ static void ota_finalize(void)
     HAL_Delay(3000);
   }
 
-  // Set bootloader flag
-  DEBUG_STR_LN("Setting OTA flag for bootloader...");
-  enable_ota_request();
+  __disable_irq();
+  uart_puts("FW: irq off\r\n");
 
-  HAL_Delay(500);
+  HAL_FLASH_Unlock();
 
-  DEBUG_STR_LN("Resetting system...");
-  HAL_Delay(200);
+  FLASH_EraseInitTypeDef e = { 0 };
+  uint32_t err = 0;
+  e.TypeErase = FLASH_TYPEERASE_PAGES;
+  e.PageAddress = 0x08004000;
+  e.NbPages = 1;
+  HAL_FLASHEx_Erase(&e, &err);
+
+  HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, 0x08004000, (uint64_t) 1);
+
+  HAL_FLASH_Lock();
+
+  uint32_t rb = *(volatile uint32_t*) 0x08004000;
+  uart_puts("FW: readback=");
+  uart_put_u32(rb);
+  uart_puts("\r\n");
+
+  uart_puts("FW: resetting\r\n");
+
+  /* Wait for last UART byte to actually leave shift register */
+  while(!(USART1->SR & USART_SR_TC));
+
+  /* Small margin (FIFO empty confirmation) */
+  for(volatile int i = 0; i < 100000; i++);
 
   NVIC_SystemReset();
 }
