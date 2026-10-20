@@ -756,6 +756,9 @@ static void uart_put_u32(uint32_t v)
 
 static void ota_finalize(void)
 {
+  ota_image_hdr_t verify_hdr;
+  static uint8_t chunk[256];
+
   ota_status_stage = OTA_STAGE_VERIFYING;
   LCD_DisplayOTAMessage(ota_status_stage);
 
@@ -763,34 +766,91 @@ static void ota_finalize(void)
   DEBUG_STR_LN("OTA completed successfully!");
   DEBUG_STR_LN("========================================\n");
 
-  // Close connection
+  /* Stop networking */
   disconnect(CLIENT_SOCKET);
   close(CLIENT_SOCKET);
   ota_active = 0;
 
-  // Verify the written firmware one more time
+  /* ────── STEP 1: Read header from W25Q64 ────── */
   DEBUG_STR_LN("Verifying firmware in W25Q64...");
-  ota_image_hdr_t verify_hdr;
-  W25Q_Read(0, (uint8_t*) &verify_hdr, sizeof(ota_image_hdr_t));
+  W25Q_Read(0, (uint8_t*) &verify_hdr, sizeof(verify_hdr));
 
-  if(verify_hdr.magic == APP_MAGIC)
+  /* ────── STEP 2: Magic check ────── */
+  if(verify_hdr.magic != APP_MAGIC)
   {
-    DEBUG_STR_LN("Firmware verification PASSED!");
-    DEBUG_STR("Firmware size: ");
-    DEBUG_NUM(verify_hdr.image_size);
-    DEBUG_STR_LN("");
-
-    ota_status_stage = OTA_STAGE_COMPLETE;
-    LCD_DisplayOTAMessage(ota_status_stage);
-  }
-  else
-  {
-    DEBUG_STR_LN("WARNING: Firmware verification FAILED!");
+    DEBUG_STR_LN("VERIFY FAILED: bad magic");
     ota_status_stage = OTA_STAGE_ERROR;
     LCD_DisplayOTAError(3);
     HAL_Delay(3000);
+    ota_status_stage = OTA_STAGE_IDLE;
+    return; /* ← MUST RETURN */
   }
 
+  /* ────── STEP 3: Size sanity ────── */
+  if(verify_hdr.image_size == 0 || verify_hdr.image_size > APP_MAX_SIZE)
+  {
+    DEBUG_STR_LN("VERIFY FAILED: bad size");
+    ota_status_stage = OTA_STAGE_ERROR;
+    LCD_DisplayOTAError(3);
+    HAL_Delay(3000);
+    ota_status_stage = OTA_STAGE_IDLE;
+    return; /* ← MUST RETURN */
+  }
+
+  /* ────── STEP 4: CRC over body in W25Q64 ────── */
+  DEBUG_STR_LN("Computing CRC over W25Q64 body...");
+  uint32_t calc_crc = 0xFFFFFFFF;
+  uint32_t addr = 16; /* body starts at offset 16 */
+  uint32_t remaining = verify_hdr.image_size;
+
+  while(remaining > 0)
+  {
+    uint32_t n = (remaining > 256) ? 256 : remaining;
+    W25Q_FastRead(addr, chunk, n);
+    for(uint32_t i = 0; i < n; i++)
+    {
+      calc_crc ^= chunk[i];
+      for(int j = 0; j < 8; j++)
+      {
+        if(calc_crc & 1)
+          calc_crc = (calc_crc >> 1) ^ 0xEDB88320;
+        else
+          calc_crc >>= 1;
+      }
+    }
+    addr += n;
+    remaining -= n;
+  }
+  calc_crc ^= 0xFFFFFFFF;
+
+  /* ────── STEP 5: Compare CRCs ────── */
+  DEBUG_STR("calc_crc = 0x");
+  DEBUG_NUM(calc_crc);
+  DEBUG_STR_LN("");
+  DEBUG_STR("hdr.crc  = 0x");
+  DEBUG_NUM(verify_hdr.crc);
+  DEBUG_STR_LN("");
+
+  if(calc_crc != verify_hdr.crc)
+  {
+    DEBUG_STR_LN("VERIFY FAILED: CRC mismatch");
+    ota_status_stage = OTA_STAGE_ERROR;
+    LCD_DisplayOTAError(3);
+    HAL_Delay(3000);
+    ota_status_stage = OTA_STAGE_IDLE;
+    return; /* ← MUST RETURN */
+  }
+
+  /* ────── STEP 6: All checks passed ────── */
+  DEBUG_STR_LN("VERIFY PASSED: magic + size + CRC");
+  DEBUG_STR("Firmware size: ");
+  DEBUG_NUM(verify_hdr.image_size);
+  DEBUG_STR_LN("");
+
+  ota_status_stage = OTA_STAGE_COMPLETE;
+  LCD_DisplayOTAMessage(ota_status_stage);
+
+  /* ────── STEP 7: Commit — write flag, reset ────── */
   __disable_irq();
   uart_puts("FW: irq off\r\n");
 
@@ -813,11 +873,7 @@ static void ota_finalize(void)
   uart_puts("\r\n");
 
   uart_puts("FW: resetting\r\n");
-
-  /* Wait for last UART byte to actually leave shift register */
   while(!(USART1->SR & USART_SR_TC));
-
-  /* Small margin (FIFO empty confirmation) */
   for(volatile int i = 0; i < 100000; i++);
 
   NVIC_SystemReset();
