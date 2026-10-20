@@ -7,9 +7,9 @@ import os
 
 # Configuration
 OTA_MAGIC = 0xABCDEFAB      
-OTA_VERSION = 0x02 
+OTA_VERSION = 0x02
 
-APP_BIN = "application.bin"      # Input application binary
+APP_BIN = "STM32_Application_v2.0.bin"      # Input application binary
 OUTPUT_IMAGE = "ota_image.bin"   # Output OTA image with header
 
 SERVER_IP = "0.0.0.0"
@@ -47,50 +47,53 @@ def create_ota_image(input_file, output_file):
     return size
 
 def serve_ota_image(image_file):
-    """Serve OTA image over TCP socket"""
-    if not os.path.exists(image_file):
-        print(f"Error: {image_file} not found!")
-        return False
-    
     with open(image_file, "rb") as f:
         firmware = f.read()
-    
     file_size = len(firmware)
     print(f"\nFirmware size: {file_size} bytes")
-    
+
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     srv.bind((SERVER_IP, SERVER_PORT))
     srv.listen(1)
-    
+
     print(f"OTA Server listening on port {SERVER_PORT}...")
     conn, addr = srv.accept()
     print(f"Client connected from {addr}")
-    
-    # Wait for START command
+
     print("Waiting for START command from client...")
     cmd = conn.recv(64)
     print(f"Received: {cmd.strip()}")
     print("Sending firmware...")
-    
-    # Send firmware in chunks
+
     sent = 0
     chunk_id = 0
-    
+
     while sent < file_size:
         chunk = firmware[sent:sent + CHUNK_SIZE]
         conn.sendall(chunk)
-        print(f"[TX] Chunk {chunk_id}, {len(chunk)} bytes")
-        
+        print(f"[TX] Chunk {chunk_id}, {len(chunk)} bytes", end=" ")
+
         sent += len(chunk)
         chunk_id += 1
-        
-        # Pace transfer
-        time.sleep(CHUNK_DELAY)
-    
+
+        # Wait for STM32 application ACK
+        conn.settimeout(30)  
+        try:
+            ack = conn.recv(1)
+        except socket.timeout:
+            print(f"\nERROR: timeout waiting for ACK after chunk {chunk_id - 1}")
+            break
+
+        if ack != b'A':
+            print(f"\nERROR: expected 'A', got {ack}")
+            break
+
+        print("ACK received")
+
     print("OTA transfer finished")
     time.sleep(0.2)
-    
+
     conn.close()
     srv.close()
     return True
