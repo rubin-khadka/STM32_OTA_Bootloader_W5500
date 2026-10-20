@@ -60,17 +60,16 @@ void bl_flash_write_app_header(uint32_t magic, uint32_t size, uint32_t crc, uint
 {
   app_header_t hdr;
 
-  hdr.ota_flag = 0;  // clear OTA FLAG
-  hdr.magic = APP_MAGIC;
-  hdr.size = size;
-  hdr.crc = crc;
-  hdr.version = version;
+  hdr.ota_flag = 0;
+  hdr.magic    = APP_MAGIC;
+  hdr.size     = size;
+  hdr.crc      = crc;
+  hdr.version  = version;
 
   HAL_FLASH_Unlock();
-  /* Erase header page ONLY */
-  flash_erase_header();
 
-  /* Write header word by word */
+  /* flash_erase_header(); */
+
   uint32_t *p = (uint32_t*) &hdr;
   uint32_t addr = APP_HEADER_ADDR;
 
@@ -85,6 +84,29 @@ void bl_flash_write_app_header(uint32_t magic, uint32_t size, uint32_t crc, uint
 void bl_ota_begin(bl_ota_ctx_t *ctx, uint32_t image_size, uint32_t expected_crc)
 {
   bl_flash_erase_app();
+
+  /* Verify erase actually happened before writing */
+  uint32_t check = *(volatile uint32_t*) APP_START_ADDR;
+  if(check != 0xFFFFFFFF)
+  {
+    const char *msg = "[BOTA] ERASE FAILED: 0x";
+    while(*msg)
+    {
+      while(!(USART1->SR & USART_SR_TXE));
+      USART1->DR = *msg++;
+    }
+    char hx[] = "0123456789ABCDEF";
+    for(int k = 28; k >= 0; k -= 4)
+    {
+      while(!(USART1->SR & USART_SR_TXE));
+      USART1->DR = hx[(check >> k) & 0xF];
+    }
+    while(!(USART1->SR & USART_SR_TXE));
+    USART1->DR = '\r';
+    while(!(USART1->SR & USART_SR_TXE));
+    USART1->DR = '\n';
+  }
+
   ctx->write_addr = APP_START_ADDR;
   ctx->total_received = 0;
   ctx->image_size = image_size;
@@ -97,23 +119,50 @@ int bl_ota_write_chunk(bl_ota_ctx_t *ctx, uint8_t *data, uint32_t len)
   if((ctx->total_received + len) > ctx->image_size)
     return -1;
 
-  /* Update CRC ONLY on real data bytes */
   bl_crc_update(&ctx->running_crc, data, len);
 
-  /* Write data to flash, handling last unaligned word safely */
   HAL_FLASH_Unlock();
+  __disable_irq(); /* ← ADD */
+
   uint32_t i = 0;
   while(i < len)
   {
     uint32_t word = 0xFFFFFFFF;
     uint32_t bytes = (len - i >= 4) ? 4 : (len - i);
-
     memcpy(&word, &data[i], bytes);
 
-    flash_write_word(ctx->write_addr, word);
+    HAL_StatusTypeDef st = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, ctx->write_addr, (uint64_t) word);
+
+    if(st != HAL_OK)
+    {
+      /* Direct-register UART poll, no ISR */
+      const char *msg = "[BWRITE FAIL] st=";
+      while(*msg)
+      {
+        while(!(USART1->SR & USART_SR_TXE));
+        USART1->DR = *msg++;
+      }
+      char hx[] = "0123456789ABCDEF";
+      for(int k = 28; k >= 0; k -= 4)
+      {
+        while(!(USART1->SR & USART_SR_TXE));
+        USART1->DR = hx[((uint32_t) st >> k) & 0xF];
+      }
+      while(!(USART1->SR & USART_SR_TXE));
+      USART1->DR = '\r';
+      while(!(USART1->SR & USART_SR_TXE));
+      USART1->DR = '\n';
+
+      __enable_irq();
+      HAL_FLASH_Lock();
+      return -2;
+    }
+
     ctx->write_addr += 4;
     i += bytes;
   }
+
+  __enable_irq(); /* ← ADD */
   HAL_FLASH_Lock();
   ctx->total_received += len;
   return 0;
@@ -125,15 +174,122 @@ int bl_ota_finalize(bl_ota_ctx_t *ctx, ota_image_hdr_t *hdr)
     return -1;
 
   uint32_t final_crc = bl_crc_finalize(ctx->running_crc);
-
   if(final_crc != ctx->expected_crc)
-  {
-    /* OTA failed → stay in bootloader */
     return -2;
+
+  /* ── Compute CRC from ACTUAL flash content ── */
+  uint32_t flash_crc = 0xFFFFFFFF;
+  const uint8_t *p = (const uint8_t*) APP_START_ADDR;
+  for(uint32_t i = 0; i < ctx->image_size; i++)
+  {
+    flash_crc ^= p[i];
+    for(int j = 0; j < 8; j++)
+    {
+      if(flash_crc & 1)
+        flash_crc = (flash_crc >> 1) ^ 0xEDB88320;
+      else
+        flash_crc >>= 1;
+    }
+  }
+  flash_crc ^= 0xFFFFFFFF;
+
+  /* Debug: show both CRCs */
+  {
+    const char *m = "[CRC] src=0x";
+    while(*m)
+    {
+      while(!(USART1->SR & USART_SR_TXE));
+      USART1->DR = *m++;
+    }
+    char hx[] = "0123456789ABCDEF";
+    for(int k = 28; k >= 0; k -= 4)
+    {
+      while(!(USART1->SR & USART_SR_TXE));
+      USART1->DR = hx[(final_crc >> k) & 0xF];
+    }
+    m = " flash=0x";
+    while(*m)
+    {
+      while(!(USART1->SR & USART_SR_TXE));
+      USART1->DR = *m++;
+    }
+    for(int k = 28; k >= 0; k -= 4)
+    {
+      while(!(USART1->SR & USART_SR_TXE));
+      USART1->DR = hx[(flash_crc >> k) & 0xF];
+    }
+    while(!(USART1->SR & USART_SR_TXE));
+    USART1->DR = '\r';
+    while(!(USART1->SR & USART_SR_TXE));
+    USART1->DR = '\n';
   }
 
-  /* Commit application */
+  if(flash_crc != final_crc)
+    return -3;
+
+  /* ── PRE-HDR diagnostic ── */
+  volatile uint32_t *sp1 = (volatile uint32_t*) 0x08004400;
+  volatile uint32_t *rh1 = (volatile uint32_t*) 0x08004404;
+  const char *msg1 = "[PRE-HDR] SP=0x";
+  while(*msg1)
+  {
+    while(!(USART1->SR & USART_SR_TXE));
+    USART1->DR = *msg1++;
+  }
+  char hx[] = "0123456789ABCDEF";
+  for(int k = 28; k >= 0; k -= 4)
+  {
+    while(!(USART1->SR & USART_SR_TXE));
+    USART1->DR = hx[(*sp1 >> k) & 0xF];
+  }
+  msg1 = " RH=0x";
+  while(*msg1)
+  {
+    while(!(USART1->SR & USART_SR_TXE));
+    USART1->DR = *msg1++;
+  }
+  for(int k = 28; k >= 0; k -= 4)
+  {
+    while(!(USART1->SR & USART_SR_TXE));
+    USART1->DR = hx[(*rh1 >> k) & 0xF];
+  }
+  while(!(USART1->SR & USART_SR_TXE));
+  USART1->DR = '\r';
+  while(!(USART1->SR & USART_SR_TXE));
+  USART1->DR = '\n';
+
   bl_flash_write_app_header(hdr->magic, ctx->image_size, final_crc, hdr->version);
+
+  /* ── POST-HDR diagnostic ── */
+  volatile uint32_t *sp2 = (volatile uint32_t*) 0x08004400;
+  volatile uint32_t *rh2 = (volatile uint32_t*) 0x08004404;
+  const char *msg2 = "[POST-HDR] SP=0x";
+  while(*msg2)
+  {
+    while(!(USART1->SR & USART_SR_TXE));
+    USART1->DR = *msg2++;
+  }
+  for(int k = 28; k >= 0; k -= 4)
+  {
+    while(!(USART1->SR & USART_SR_TXE));
+    USART1->DR = hx[(*sp2 >> k) & 0xF];
+  }
+  msg2 = " RH=0x";
+  while(*msg2)
+  {
+    while(!(USART1->SR & USART_SR_TXE));
+    USART1->DR = *msg2++;
+  }
+  for(int k = 28; k >= 0; k -= 4)
+  {
+    while(!(USART1->SR & USART_SR_TXE));
+    USART1->DR = hx[(*rh2 >> k) & 0xF];
+  }
+  while(!(USART1->SR & USART_SR_TXE));
+  USART1->DR = '\r';
+  while(!(USART1->SR & USART_SR_TXE));
+  USART1->DR = '\n';
+
   return 0;
 }
 

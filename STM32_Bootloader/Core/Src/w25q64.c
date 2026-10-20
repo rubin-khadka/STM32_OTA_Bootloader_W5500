@@ -7,6 +7,7 @@
 
 #include "main.h"
 #include "w25q64.h"
+#include "usart1.h"
 #include <string.h>
 
 /* ================= USER CONFIG ================= */
@@ -40,12 +41,24 @@ void SPI_Write(uint8_t *data, uint16_t len)
   {
     HAL_Delay(1);
   }
-  HAL_SPI_Transmit(&W25Q_SPI, data, len, 2000);
+  HAL_StatusTypeDef st = HAL_SPI_Transmit(&W25Q_SPI, data, len, 2000);
+  if(st != HAL_OK)
+  {
+    USART1_SendString("SPI_TX err=");
+    USART1_SendNumber(st);
+    USART1_SendString("\r\n");
+  }
 }
 
 void SPI_Read(uint8_t *data, uint16_t len)
 {
-  uint8_t dummy = 0x00;
+  /* Flush stale byte + OVR from the previous SPI_Write */
+  volatile uint32_t tmp;
+  tmp = W25Q_SPI.Instance->DR;
+  tmp = W25Q_SPI.Instance->SR;
+  (void) tmp;
+
+  uint8_t dummy = 0xFF;
   for(uint16_t i = 0; i < len; i++)
   {
     HAL_SPI_TransmitReceive(&W25Q_SPI, &dummy, &data[i], 1, 5000);
@@ -106,13 +119,23 @@ void W25Q_Reset(void)
 
 uint32_t W25Q_ReadID(void)
 {
-  uint8_t tData = 0x9F;  // Read JEDEC ID
-  uint8_t rData[3];
+  uint8_t tx[5] = { 0x9F, 0xFF, 0xFF, 0xFF, 0xFF };
+  uint8_t rx[5] = { 0 };
+
   csLOW();
-  SPI_Write(&tData, 1);
-  SPI_Read(rData, 3);
+  HAL_SPI_TransmitReceive(&W25Q_SPI, tx, rx, 5, 5000);
   csHIGH();
-  return ((rData[0] << 16) | (rData[1] << 8) | rData[2]);
+
+  USART1_SendString("ID all: ");
+  for(int i = 0; i < 5; i++)
+  {
+    USART1_SendNumber(rx[i]);
+    USART1_SendString(" ");
+  }
+  USART1_SendString("\r\n");
+
+  /* Chip responds 2 clocks late — real ID at rx[2], rx[3], rx[4] */
+  return ((uint32_t) rx[2] << 16) | ((uint32_t) rx[3] << 8) | rx[4];
 }
 
 void W25Q_Erase(uint32_t start_addr, uint32_t size)
@@ -123,33 +146,15 @@ void W25Q_Erase(uint32_t start_addr, uint32_t size)
   for(uint32_t sector = first_sector; sector <= last_sector; sector++)
   {
     uint32_t addr = sector * W25Q_SECTOR_SIZE;
-    uint8_t cmd[5];
 
     write_enable();
 
-    if(chipSizeinmb < 256)
-    {
-      cmd[0] = 0x20; // Sector Erase (3-byte address)
-      cmd[1] = (addr >> 16) & 0xFF;
-      cmd[2] = (addr >> 8) & 0xFF;
-      cmd[3] = addr & 0xFF;
+    uint8_t tx[4] = { 0x20, (addr >> 16) & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF };
+    uint8_t rx[4];
 
-      csLOW();
-      SPI_Write(cmd, 4);
-      csHIGH();
-    }
-    else
-    {
-      cmd[0] = 0x21; // Sector Erase (4-byte address)
-      cmd[1] = (addr >> 24) & 0xFF;
-      cmd[2] = (addr >> 16) & 0xFF;
-      cmd[3] = (addr >> 8) & 0xFF;
-      cmd[4] = addr & 0xFF;
-
-      csLOW();
-      SPI_Write(cmd, 5);
-      csHIGH();
-    }
+    csLOW();
+    HAL_SPI_TransmitReceive(&W25Q_SPI, tx, rx, 4, 5000);
+    csHIGH();
 
     W25Q_WaitForWriteEnd();
     write_disable();
@@ -168,30 +173,19 @@ void W25Q_Write(uint32_t addr, uint8_t *buf, uint16_t len)
 
     write_enable();
 
-    uint8_t cmd[5];
-    if(chipSizeinmb < 256)
-    {
-      cmd[0] = 0x02; // Page Program
-      cmd[1] = (addr >> 16) & 0xFF;
-      cmd[2] = (addr >> 8) & 0xFF;
-      cmd[3] = addr & 0xFF;
+    uint8_t tx[4 + 256];
+    uint8_t rx[4 + 256];
+    uint16_t total = 4 + to_write;
 
-      csLOW();
-      SPI_Write(cmd, 4);
-    }
-    else
-    {
-      cmd[0] = 0x12; // Page Program (4-byte)
-      cmd[1] = (addr >> 24) & 0xFF;
-      cmd[2] = (addr >> 16) & 0xFF;
-      cmd[3] = (addr >> 8) & 0xFF;
-      cmd[4] = addr & 0xFF;
+    tx[0] = 0x02;
+    tx[1] = (addr >> 16) & 0xFF;
+    tx[2] = (addr >> 8) & 0xFF;
+    tx[3] = addr & 0xFF;
+    for(uint16_t i = 0; i < to_write; i++)
+      tx[4 + i] = buf[i];
 
-      csLOW();
-      SPI_Write(cmd, 5);
-    }
-
-    SPI_Write(buf, to_write);
+    csLOW();
+    HAL_SPI_TransmitReceive(&W25Q_SPI, tx, rx, total, 5000);
     csHIGH();
 
     W25Q_WaitForWriteEnd();
@@ -205,61 +199,61 @@ void W25Q_Write(uint32_t addr, uint8_t *buf, uint16_t len)
 
 void W25Q_Read(uint32_t addr, uint8_t *data, uint16_t len)
 {
-  uint8_t cmd[6];   // opcode + max 4 address bytes + dummy (optional)
-  uint16_t idx;
-
-  idx = 0;
-
-  if(chipSizeinmb < 256)
+  while(len > 0)
   {
-    cmd[idx++] = 0x03;   // READ (3-byte address)
-    cmd[idx++] = (addr >> 16) & 0xFF;
-    cmd[idx++] = (addr >> 8) & 0xFF;
-    cmd[idx++] = addr & 0xFF;
-  }
-  else
-  {
-    cmd[idx++] = 0x13;   // READ (4-byte address)
-    cmd[idx++] = (addr >> 24) & 0xFF;
-    cmd[idx++] = (addr >> 16) & 0xFF;
-    cmd[idx++] = (addr >> 8) & 0xFF;
-    cmd[idx++] = addr & 0xFF;
-  }
+    uint16_t chunk = (len > 256) ? 256 : len;
 
-  csLOW();
-  SPI_Write(cmd, idx);
-  SPI_Read(data, len);   // continuous read is allowed
-  csHIGH();
+    uint8_t tx[4 + 256];
+    uint8_t rx[4 + 256];
+    uint16_t total = 4 + chunk;
 
+    tx[0] = 0x03;
+    tx[1] = (addr >> 16) & 0xFF;
+    tx[2] = (addr >> 8) & 0xFF;
+    tx[3] = addr & 0xFF;
+    for(uint16_t i = 4; i < total; i++)
+      tx[i] = 0xFF;
+
+    csLOW();
+    HAL_SPI_TransmitReceive(&W25Q_SPI, tx, rx, total, 5000);
+    csHIGH();
+
+    for(uint16_t i = 0; i < chunk; i++)
+      data[i] = rx[4 + i];
+
+    addr += chunk;
+    data += chunk;
+    len -= chunk;
+  }
 }
 
 void W25Q_FastRead(uint32_t addr, uint8_t *data, uint16_t len)
 {
-  uint8_t cmd[7];
-  uint16_t idx;
-
-  idx = 0;
-
-  if(chipSizeinmb < 256)
+  while(len > 0)
   {
-    cmd[idx++] = 0x0B;   // FAST READ (3-byte addr)
-    cmd[idx++] = (addr >> 16) & 0xFF;
-    cmd[idx++] = (addr >> 8) & 0xFF;
-    cmd[idx++] = addr & 0xFF;
-    cmd[idx++] = 0x00;   // dummy
-  }
-  else
-  {
-    cmd[idx++] = 0x0C;   // FAST READ (4-byte addr)
-    cmd[idx++] = (addr >> 24) & 0xFF;
-    cmd[idx++] = (addr >> 16) & 0xFF;
-    cmd[idx++] = (addr >> 8) & 0xFF;
-    cmd[idx++] = addr & 0xFF;
-    cmd[idx++] = 0x00;   // dummy
-  }
+    uint16_t chunk = (len > 256) ? 256 : len;
 
-  csLOW();
-  SPI_Write(cmd, idx);
-  SPI_Read(data, len);
-  csHIGH();
+    uint8_t tx[5 + 256];
+    uint8_t rx[5 + 256];
+    uint16_t total = 5 + chunk;
+
+    tx[0] = 0x0B;
+    tx[1] = (addr >> 16) & 0xFF;
+    tx[2] = (addr >> 8) & 0xFF;
+    tx[3] = addr & 0xFF;
+    tx[4] = 0x00;
+    for(uint16_t i = 5; i < total; i++)
+      tx[i] = 0xFF;
+
+    csLOW();
+    HAL_SPI_TransmitReceive(&W25Q_SPI, tx, rx, total, 5000);
+    csHIGH();
+
+    for(uint16_t i = 0; i < chunk; i++)
+      data[i] = rx[5 + i];
+
+    addr += chunk;
+    data += chunk;
+    len -= chunk;
+  }
 }
