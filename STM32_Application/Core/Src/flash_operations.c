@@ -30,19 +30,6 @@ uint32_t flash_erase_app(void)
   return error;
 }
 
-//uint32_t flash_erase_ota (void)
-//{
-//    FLASH_EraseInitTypeDef erase;
-//    uint32_t error;
-//
-//    erase.TypeErase     = FLASH_TYPEERASE_PAGES;
-//    erase.PageAddress   = OTA_START_ADDR;
-//    erase.NbPages       = OTA_MAX_SIZE/1024;
-//
-//    HAL_FLASHEx_Erase(&erase, &error);
-//    return error;
-//}
-
 uint32_t flash_erase_header(void)
 {
   FLASH_EraseInitTypeDef erase;

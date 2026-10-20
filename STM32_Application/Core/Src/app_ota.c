@@ -16,8 +16,6 @@ void enable_ota_request(void)
 {
   HAL_FLASH_Unlock();
   flash_erase_header();
-  flash_write_word(APP_HEADER_ADDR, OTA_FLAG_START);
+  HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, APP_HEADER_ADDR, (uint64_t)OTA_FLAG_START);
   HAL_FLASH_Lock();
-
-  NVIC_SystemReset();
 }
