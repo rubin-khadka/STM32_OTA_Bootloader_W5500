@@ -1,0 +1,2 @@
+../Drivers/CMSIS/Include/core_cm3.h:1762:34:__NVIC_SystemReset	4	static,ignoring_inline_asm
+../Core/Src/app_ota.c:15:6:enable_ota_request	8	static

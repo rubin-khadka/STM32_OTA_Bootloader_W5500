@@ -1,0 +1,14 @@
+../Core/Src/ds3231.c:16:9:DS3231_Init	16	static
+../Core/Src/ds3231.c:60:9:DS3231_DecToBcd	16	static
+../Core/Src/ds3231.c:66:9:DS3231_BcdToDec	16	static
+../Core/Src/ds3231.c:72:9:DS3231_SetTime	24	static
+../Core/Src/ds3231.c:90:9:DS3231_GetTime	24	static
+../Core/Src/ds3231.c:111:7:DS3231_GetTemperature	16	static
+../Core/Src/ds3231.c:133:9:DS3231_ForceTempConv	16	static
+../Core/Src/ds3231.c:158:9:DS3231_CheckOscillatorStop	16	static
+../Core/Src/ds3231.c:169:9:DS3231_SetAlarm1	32	static
+../Core/Src/ds3231.c:184:9:DS3231_SetAlarm2	24	static
+../Core/Src/ds3231.c:198:9:DS3231_WriteReg	24	static
+../Core/Src/ds3231.c:234:9:DS3231_ReadReg	16	static
+../Core/Src/ds3231.c:246:9:DS3231_WriteMulti	24	static
+../Core/Src/ds3231.c:286:9:DS3231_ReadMulti	16	static

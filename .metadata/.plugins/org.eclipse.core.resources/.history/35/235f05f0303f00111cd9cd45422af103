@@ -1,0 +1,2 @@
+../Core/Src/tasks.c:29:6:Task_DHT11_Read	5
+../Core/Src/tasks.c:78:6:Task_LCD_Update	4

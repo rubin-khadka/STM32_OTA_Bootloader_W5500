@@ -1,0 +1,11 @@
+../Drivers/Ethernet_W5500/DNS/dns.c:125:10:get16	1
+../Drivers/Ethernet_W5500/DNS/dns.c:133:11:put16	1
+../Drivers/Ethernet_W5500/DNS/dns.c:150:5:parse_name	9
+../Drivers/Ethernet_W5500/DNS/dns.c:217:11:dns_question	2
+../Drivers/Ethernet_W5500/DNS/dns.c:244:11:dns_answer	16
+../Drivers/Ethernet_W5500/DNS/dns.c:347:8:parseDNSMSG	13
+../Drivers/Ethernet_W5500/DNS/dns.c:437:9:dns_makequery	4
+../Drivers/Ethernet_W5500/DNS/dns.c:500:8:check_DNS_timeout	3
+../Drivers/Ethernet_W5500/DNS/dns.c:518:6:DNS_init	1
+../Drivers/Ethernet_W5500/DNS/dns.c:525:8:DNS_run	5
+../Drivers/Ethernet_W5500/DNS/dns.c:613:6:DNS_time_handler	1

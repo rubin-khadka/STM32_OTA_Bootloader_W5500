@@ -1,0 +1,10 @@
+../Core/Src/bl_ota.c:19:6:bl_crc_init	16	static
+../Core/Src/bl_ota.c:24:6:bl_crc_update	32	static
+../Core/Src/bl_ota.c:39:10:bl_crc_finalize	16	static
+../Core/Src/bl_ota.c:44:5:check_ota_request	8	static
+../Core/Src/bl_ota.c:51:10:bl_flash_erase_app	16	static
+../Core/Src/bl_ota.c:59:6:bl_flash_write_app_header	56	static
+../Core/Src/bl_ota.c:84:6:bl_ota_begin	64	static
+../Core/Src/bl_ota.c:117:5:bl_ota_write_chunk	80	static,ignoring_inline_asm
+../Core/Src/bl_ota.c:171:5:bl_ota_finalize	136	static
+../Core/Src/bl_ota.c:296:5:bl_ota_run	304	static

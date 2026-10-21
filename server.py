@@ -7,7 +7,7 @@ import os
 
 # Configuration
 OTA_MAGIC = 0xABCDEFAB      
-OTA_VERSION = 0x02
+OTA_VERSION = 0x01
 
 APP_BIN = "STM32_Application_v2.0.bin"      # Input application binary
 OUTPUT_IMAGE = "ota_image.bin"   # Output OTA image with header

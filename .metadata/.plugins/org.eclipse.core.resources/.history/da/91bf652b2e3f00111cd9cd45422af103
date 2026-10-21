@@ -1,0 +1,12 @@
+../Drivers/CMSIS/Include/core_cm3.h:1762:34:__NVIC_SystemReset	1
+../Core/Src/ota_tcp_server.c:78:13:LCD_DisplayOTAMessage	7
+../Core/Src/ota_tcp_server.c:123:13:LCD_DisplayOTAProgress	6
+../Core/Src/ota_tcp_server.c:176:13:LCD_DisplayOTAError	5
+../Core/Src/ota_tcp_server.c:205:13:erase_ota_flash	1
+../Core/Src/ota_tcp_server.c:213:16:ota_write	7
+../Core/Src/ota_tcp_server.c:279:13:ota_process_rx	15
+../Core/Src/ota_tcp_server.c:431:8:OTA_Client_Init	10
+../Core/Src/ota_tcp_server.c:517:6:OTA_Client_Task	18
+../Core/Src/ota_tcp_server.c:610:6:ota_start	6
+../Core/Src/ota_tcp_server.c:696:13:ota_finalize	1
+../Core/Src/ota_tcp_server.c:745:13:ota_error	1
