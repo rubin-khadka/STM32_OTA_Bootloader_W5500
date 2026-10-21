@@ -403,8 +403,10 @@ static void ota_process_rx(uint8_t *data, uint16_t len)
   DEBUG_NUM(ota_hdr.image_size + OTA_HEADER_SIZE);
   DEBUG_STR_LN("");
 
-  /* ---------------- Send ACK every chunk ---------------- */
-  if(bytes_in_current_chunk >= OTA_ACK_CHUNK)
+  /* ---------------- Send ACK every chunk + last chunk ---------------- */
+  uint8_t is_last_chunk = header_received && (bytes_received >= ota_hdr.image_size + OTA_HEADER_SIZE);
+
+  if(bytes_in_current_chunk >= OTA_ACK_CHUNK || is_last_chunk)
   {
     DEBUG_STR_LN("Sending ACK");
     send(CLIENT_SOCKET, (uint8_t*) "A", 1);
@@ -422,6 +424,7 @@ static void ota_process_rx(uint8_t *data, uint16_t len)
     DEBUG_NUM(ota_hdr.image_size);
     DEBUG_STR_LN("");
     DEBUG_STR_LN("========================================\n");
+    HAL_Delay(100);
     ota_finalize();
   }
 }
