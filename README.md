@@ -69,6 +69,7 @@ The STM32 flash memory is partitioned to separate the bootloader from the applic
 | Start Address | Size | Section | Description |
 |---------------|------|---------|-------------|
 | 0x08000000 | 16KB | Bootloader | Custom bootloader code |
+| 0x08004000 | 1KB | Application Header | Application header containing information |
 | 0x08004400 | 47KB | Application | Main application firmware |
 
 ```
