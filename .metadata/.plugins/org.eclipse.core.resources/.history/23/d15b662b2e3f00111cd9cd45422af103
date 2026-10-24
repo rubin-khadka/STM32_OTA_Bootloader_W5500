@@ -1,2 +1,0 @@
-../Core/Src/tasks.c:29:6:Task_DHT11_Read	40	static,ignoring_inline_asm
-../Core/Src/tasks.c:78:6:Task_LCD_Update	16	static

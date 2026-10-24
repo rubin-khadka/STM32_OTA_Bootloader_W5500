@@ -1,5 +1,0 @@
-../Drivers/Ethernet_W5500/wizchip_port.c:36:6:W5500_Select	1
-../Drivers/Ethernet_W5500/wizchip_port.c:40:6:W5500_Unselect	1
-../Drivers/Ethernet_W5500/wizchip_port.c:45:9:W5500_ReadByte	1
-../Drivers/Ethernet_W5500/wizchip_port.c:53:6:W5500_WriteByte	1
-../Drivers/Ethernet_W5500/wizchip_port.c:58:5:W5500_Init	7

@@ -1,5 +1,0 @@
-../Core/Src/flash_operations.c:14:10:flash_read_ota_flag	1
-../Core/Src/flash_operations.c:20:10:flash_erase_app	1
-../Core/Src/flash_operations.c:46:10:flash_erase_header	1
-../Core/Src/flash_operations.c:59:6:flash_write_word	1
-../Core/Src/flash_operations.c:64:6:flash_write_bytes	4
