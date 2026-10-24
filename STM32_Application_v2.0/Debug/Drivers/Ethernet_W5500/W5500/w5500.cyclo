@@ -1,0 +1,9 @@
+../Drivers/Ethernet_W5500/W5500/w5500.c:65:10:WIZCHIP_READ	3
+../Drivers/Ethernet_W5500/W5500/w5500.c:91:10:WIZCHIP_WRITE	2
+../Drivers/Ethernet_W5500/W5500/w5500.c:117:10:WIZCHIP_READ_BUF	4
+../Drivers/Ethernet_W5500/W5500/w5500.c:145:10:WIZCHIP_WRITE_BUF	3
+../Drivers/Ethernet_W5500/W5500/w5500.c:174:10:getSn_TX_FSR	3
+../Drivers/Ethernet_W5500/W5500/w5500.c:189:10:getSn_RX_RSR	3
+../Drivers/Ethernet_W5500/W5500/w5500.c:203:6:wiz_send_data	2
+../Drivers/Ethernet_W5500/W5500/w5500.c:221:6:wiz_recv_data	2
+../Drivers/Ethernet_W5500/W5500/w5500.c:240:6:wiz_recv_ignore	1

@@ -1,0 +1,15 @@
+../Core/Src/w25q64.c:23:6:W25Q_Delay	1
+../Core/Src/w25q64.c:28:6:csLOW	1
+../Core/Src/w25q64.c:33:6:csHIGH	1
+../Core/Src/w25q64.c:38:6:SPI_Write	3
+../Core/Src/w25q64.c:53:6:SPI_Read	2
+../Core/Src/w25q64.c:70:13:write_enable	1
+../Core/Src/w25q64.c:78:13:write_disable	1
+../Core/Src/w25q64.c:86:16:W25Q_ReadStatus	1
+../Core/Src/w25q64.c:99:13:W25Q_WaitForWriteEnd	2
+../Core/Src/w25q64.c:109:6:W25Q_Reset	1
+../Core/Src/w25q64.c:120:10:W25Q_ReadID	2
+../Core/Src/w25q64.c:137:6:W25Q_Erase	2
+../Core/Src/w25q64.c:163:6:W25Q_Write	3
+../Core/Src/w25q64.c:198:6:W25Q_Read	4
+../Core/Src/w25q64.c:226:6:W25Q_FastRead	4

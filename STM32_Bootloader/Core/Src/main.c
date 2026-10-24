@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "bl_jump.h"
 #include "w25q64.h"
+#include "bl_backup.h"
 
 #include "usart1.h"
 /* USER CODE END Includes */
@@ -132,28 +133,70 @@ int main(void)
     USART1_SendString("W25Q64 OK\r\n");
   }
 
+  /* ── OTA flow ─────────────────────────────────────────────────── */
   if(check_ota_request() == 0)
   {
-    USART1_SendString("OTA Requested... Flashing...\r\n");
+    USART1_SendString("OTA Requested...\r\n");
 
-    ota_stream_t stream = { .read = ota_read_mem, .set_total_size = ota_mem_set_total_size };
+    bool proceed_with_ota = false;
+    bl_backup_status_t bak = bl_backup_current_app();
 
-    bl_ota_ctx_t ctx;
-    if(bl_ota_run(&ctx, &stream) != 0)
+    if(bak == BL_BACKUP_OK)
     {
-      USART1_SendString("OTA Failed...\r\n");
-      while(1)
-      {
-
-      }
+      USART1_SendString("Backup OK\r\n");
+      proceed_with_ota = true;
+    }
+    else if(bak == BL_BACKUP_ERR_READ)
+    {
+      USART1_SendString("No valid app to back up - proceeding\r\n");
+      proceed_with_ota = true;
     }
     else
     {
-      USART1_SendString("OTA Flashed Successfully\r\n");
+      USART1_SendString("Backup FAILED - aborting OTA\r\n");
+      proceed_with_ota = false;
+    }
+
+    if(proceed_with_ota)
+    {
+      ota_stream_t stream = { .read = ota_read_mem, .set_total_size = ota_mem_set_total_size };
+      bl_ota_ctx_t ctx;
+
+      if(bl_ota_run(&ctx, &stream) != 0)
+      {
+        USART1_SendString("OTA Failed - rolling back...\r\n");
+
+        if(bl_restore_from_backup() != BL_BACKUP_OK)
+        {
+          USART1_SendString("ROLLBACK FAILED - no valid app\r\n");
+          while(1)
+          {
+          }
+        }
+        USART1_SendString("Rollback OK\r\n");
+      }
+      else
+      {
+        USART1_SendString("OTA Flashed Successfully\r\n");
+      }
     }
   }
 
   BootloaderError_t err = Bootloader_Is_App_Valid();
+
+  if(err != BOOT_SUCCESS && bl_backup_available())
+  {
+    USART1_SendString("App invalid + backup present -> restoring\r\n");
+
+    if(bl_restore_from_backup() == BL_BACKUP_OK)
+    {
+      err = Bootloader_Is_App_Valid(); /* re-check after restore */
+    }
+    else
+    {
+      USART1_SendString("Recovery FAILED - backup unusable\r\n");
+    }
+  }
 
   switch(err)
   {
