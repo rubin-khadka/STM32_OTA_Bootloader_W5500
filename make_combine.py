@@ -1,12 +1,12 @@
 import struct, zlib, sys, os
 
-APP_BIN = "STM32_Application_v1.0.bin"   # ← your app .bin path
+APP_BIN = "STM32_Application_v1.0.bin"
 OUT_BIN = "combined.bin"
 
-HEADER_ADDR = 0x08004000   # APP_HEADER_ADDR
-HEADER_SIZE = 1024         # 1 KB page
-MAGIC       = 0xABCDEFAB
-VERSION     = 1
+HEADER_ADDR = 0x08004000    # APP_HEADER_ADDR
+HEADER_SIZE = 1024          # 1 KB page
+MAGIC       = 0xABCDEFAB    # Magic
+VERSION     = 1             # Version
 
 if not os.path.exists(APP_BIN):
     print(f"ERROR: {APP_BIN} not found"); sys.exit(1)
@@ -22,7 +22,7 @@ print(f"App file: {APP_BIN}")
 print(f"App size: {size} bytes (0x{size:X})")
 print(f"CRC-32:   0x{crc:08X}")
 
-# Build header — 5 words (20 bytes), pad to 1 KB with 0xFF (erased flash)
+# Build header — 5 words (20 bytes)
 header = struct.pack("<IIIII", 0, MAGIC, size, crc, VERSION)
 header += b"\xFF" * (HEADER_SIZE - len(header))
 

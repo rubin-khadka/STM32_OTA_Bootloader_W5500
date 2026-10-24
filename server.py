@@ -10,7 +10,7 @@ OTA_MAGIC = 0xABCDEFAB
 OTA_VERSION = 0x01
 
 APP_BIN = "STM32_Application_v2.0.bin"      # Input application binary
-OUTPUT_IMAGE = "ota_image.bin"   # Output OTA image with header
+OUTPUT_IMAGE = "ota_image.bin"              # Output OTA image with header
 
 SERVER_IP = "0.0.0.0"
 SERVER_PORT = 5678
@@ -31,10 +31,10 @@ def create_ota_image(input_file, output_file):
     
     hdr = struct.pack(
         "<IIII",
-        OTA_MAGIC,          # magic
+        OTA_MAGIC,              # magic
         size,
-        crc,
-        OTA_VERSION          # version
+        crc,                    # CRC
+        OTA_VERSION             # version
     )
     
     with open(output_file, "wb") as f:
