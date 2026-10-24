@@ -1,12 +1,14 @@
 /*
  * bl_ota.h
  *
- *  Created on: 03-Jan-2026
- *      Author: arunrawat
+ *  Created on: Oct 24, 2026
+ *      Author: Rubin Khadka
  */
 
 #ifndef INC_BL_OTA_H_
 #define INC_BL_OTA_H_
+
+#include <stdint.h>
 
 int check_ota_request(void);
 
@@ -34,5 +36,12 @@ typedef struct
 } ota_stream_t;
 
 int bl_ota_run(bl_ota_ctx_t *ctx, ota_stream_t *stream);
+
+uint32_t bl_flash_erase_app(void);
+void bl_flash_write_app_header(uint32_t magic, uint32_t size, uint32_t crc, uint32_t version);
+
+void bl_crc_init(uint32_t *crc);
+void bl_crc_update(uint32_t *crc, uint8_t *data, uint32_t len);
+uint32_t bl_crc_finalize(uint32_t crc);
 
 #endif /* INC_BL_OTA_H_ */

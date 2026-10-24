@@ -1,6 +1,0 @@
-../Core/Src/flash_operations.c:14:10:flash_read_ota_flag	16	static
-../Core/Src/flash_operations.c:20:10:flash_erase_app	32	static
-../Core/Src/flash_operations.c:49:10:flash_erase_header	32	static
-../Core/Src/flash_operations.c:66:10:flash_write_word_checked	24	static
-../Core/Src/flash_operations.c:73:6:flash_write_word	16	static
-../Core/Src/flash_operations.c:78:6:flash_write_bytes	40	static

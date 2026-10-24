@@ -5,12 +5,12 @@
  *      Author: Rubin Khadka
  */
 
+#include <bl_ota.h>
 #include <flash_layout.h>
 #include "main.h"
 #include "flash_operations.h"
-#include "bl_ota.h"
 #include "app_header.h"
-#include "string.h"
+#include <string.h>
 
 #define OTA_FLAG_START    1
 
@@ -61,10 +61,10 @@ void bl_flash_write_app_header(uint32_t magic, uint32_t size, uint32_t crc, uint
   app_header_t hdr;
 
   hdr.ota_flag = 0;
-  hdr.magic    = APP_MAGIC;
-  hdr.size     = size;
-  hdr.crc      = crc;
-  hdr.version  = version;
+  hdr.magic = APP_MAGIC;
+  hdr.size = size;
+  hdr.crc = crc;
+  hdr.version = version;
 
   HAL_FLASH_Unlock();
 
@@ -122,7 +122,7 @@ int bl_ota_write_chunk(bl_ota_ctx_t *ctx, uint8_t *data, uint32_t len)
   bl_crc_update(&ctx->running_crc, data, len);
 
   HAL_FLASH_Unlock();
-  __disable_irq(); /* ← ADD */
+  __disable_irq();
 
   uint32_t i = 0;
   while(i < len)

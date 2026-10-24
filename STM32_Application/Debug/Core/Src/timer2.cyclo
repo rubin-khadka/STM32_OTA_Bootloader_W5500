@@ -1,6 +1,0 @@
-../Drivers/CMSIS/Include/core_cm3.h:1511:22:__NVIC_EnableIRQ	2
-../Drivers/CMSIS/Include/core_cm3.h:1639:22:__NVIC_SetPriority	2
-../Core/Src/timer2.c:14:6:TIMER2_Init	2
-../Core/Src/timer2.c:46:6:TIM2_IRQHandler	2
-../Core/Src/timer2.c:60:10:TIMER2_GetMillis	1
-../Core/Src/timer2.c:73:6:TIMER2_Delay_ms	2

@@ -1,2 +1,0 @@
-../Core/Src/timer3.c:16:6:TIMER3_SetupPeriod	16	static
-../Core/Src/timer3.c:47:9:TIMER3_WaitPeriod	4	static

@@ -1,5 +1,6 @@
-Core/Src/bl_ota.o: ../Core/Src/bl_ota.c ../Core/Inc/flash_layout.h \
- ../Core/Inc/main.h ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h \
+Core/Src/bl_ota.o: ../Core/Src/bl_ota.c ../Core/Inc/bl_ota.h \
+ ../Core/Inc/flash_layout.h ../Core/Inc/main.h \
+ ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h \
  ../Core/Inc/stm32f1xx_hal_conf.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h \
@@ -22,8 +23,9 @@ Core/Src/bl_ota.o: ../Core/Src/bl_ota.c ../Core/Inc/flash_layout.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h \
- ../Core/Inc/flash_operations.h ../Core/Inc/bl_ota.h \
- ../Core/Inc/app_header.h ../Core/Inc/flash_layout.h
+ ../Core/Inc/flash_operations.h ../Core/Inc/app_header.h \
+ ../Core/Inc/flash_layout.h
+../Core/Inc/bl_ota.h:
 ../Core/Inc/flash_layout.h:
 ../Core/Inc/main.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h:
@@ -50,6 +52,5 @@ Core/Src/bl_ota.o: ../Core/Src/bl_ota.c ../Core/Inc/flash_layout.h \
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h:
 ../Core/Inc/flash_operations.h:
-../Core/Inc/bl_ota.h:
 ../Core/Inc/app_header.h:
 ../Core/Inc/flash_layout.h:

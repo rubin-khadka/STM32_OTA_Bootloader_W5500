@@ -1,8 +1,0 @@
-../Core/Src/i2c2.c:12:6:I2C2_Init	16	static
-../Core/Src/i2c2.c:46:12:I2C2_Start	16	static
-../Core/Src/i2c2.c:75:6:I2C2_Stop	16	static
-../Core/Src/i2c2.c:91:12:I2C2_SendAddr	24	static
-../Core/Src/i2c2.c:123:12:I2C2_WriteByte	24	static
-../Core/Src/i2c2.c:146:12:I2C2_WriteByteWaitComplete	24	static
-../Core/Src/i2c2.c:171:12:I2C2_ReadBurst	24	static
-../Core/Src/i2c2.c:293:12:I2C2_RepeatedStart	16	static

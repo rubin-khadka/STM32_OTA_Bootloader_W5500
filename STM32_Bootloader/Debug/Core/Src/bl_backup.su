@@ -1,0 +1,6 @@
+../Core/Src/bl_backup.c:24:17:sectors_for	16	static
+../Core/Src/bl_backup.c:30:17:crc_of_w25q	288	static
+../Core/Src/bl_backup.c:46:13:read_current_header	24	static
+../Core/Src/bl_backup.c:56:6:bl_backup_available	24	static
+../Core/Src/bl_backup.c:72:20:bl_backup_current_app	320	static
+../Core/Src/bl_backup.c:142:20:bl_restore_from_backup	320	static,ignoring_inline_asm

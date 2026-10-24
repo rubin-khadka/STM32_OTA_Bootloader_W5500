@@ -1,3 +1,4 @@
+"./Core/Src/bl_backup.o"
 "./Core/Src/bl_jump.o"
 "./Core/Src/bl_ota.o"
 "./Core/Src/crc32.o"

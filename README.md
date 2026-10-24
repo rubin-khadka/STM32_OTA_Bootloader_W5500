@@ -124,7 +124,7 @@ The bootloader uses the header information to:
 
 ## PC Server Script
 
-The Python script does everything in one run — it creates the OTA image and immediately starts the server, so you only need to provide the `.bin` file and run the script.
+The Python script does everything in one run. It creates the OTA image and immediately starts the server, so you only need to provide the `.bin` file and run the script.
 
 ### 1. Creating the OTA Image
 

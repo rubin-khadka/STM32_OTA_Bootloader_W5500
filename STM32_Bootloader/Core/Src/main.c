@@ -17,17 +17,15 @@
  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+#include <bl_ota.h>
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "bl_jump.h"
-#include "bl_ota.h"
 #include "w25q64.h"
 
 #include "usart1.h"
-
-#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -121,17 +119,6 @@ int main(void)
 
   USART1_SendString("\r\nBootloader Started !!!\r\n");
 
-  /* Print FLASH_PAGE_SIZE for verification */
-  USART1_SendString("[BL] FLASH_PAGE_SIZE=0x");
-  {
-    char hx[] = "0123456789ABCDEF";
-    for(int k = 12; k >= 0; k -= 4)
-    {
-      USART1_SendString((char[] ) { hx[((uint32_t) FLASH_PAGE_SIZE >> k) & 0xF], 0 });
-    }
-  }
-  USART1_SendString("\r\n");
-
   // W25Q64 Flash Initialize
   W25Q_Reset();
   uint32_t id = W25Q_ReadID();
@@ -147,56 +134,6 @@ int main(void)
 
   if(check_ota_request() == 0)
   {
-    /* ===== DIAGNOSTIC: verify W25Q64 has the staged firmware ===== */
-    {
-      ota_image_hdr_t hdr;
-      uint8_t body[32];
-
-      USART1_SendString("\r\n===== W25Q64 STAGED IMAGE CHECK =====\r\n");
-
-      /* Read 16-byte OTA image header (from offset 0) */
-      W25Q_FastRead(0, (uint8_t*) &hdr, sizeof(hdr));
-
-      USART1_SendString("hdr.magic      = ");
-      USART1_SendNumber(hdr.magic);
-      USART1_SendString("  (expect 2882400171 = 0xABCDEFAB)\r\n");
-
-      USART1_SendString("hdr.image_size = ");
-      USART1_SendNumber(hdr.image_size);
-      USART1_SendString("  (expect 38896)\r\n");
-
-      USART1_SendString("hdr.crc        = ");
-      USART1_SendNumber(hdr.crc);
-      USART1_SendString("  (expect 1595761973 = 0x5F1D6535)\r\n");
-
-      USART1_SendString("hdr.version    = ");
-      USART1_SendNumber(hdr.version);
-      USART1_SendString("  (expect 2)\r\n");
-
-      /* Read first 32 bytes of app body (from offset 16) */
-      W25Q_FastRead(16, body, 32);
-      USART1_SendString("body[0..31] = ");
-      for(int i = 0; i < 32; i++)
-      {
-        USART1_SendNumber(body[i]);
-        USART1_SendString(" ");
-      }
-      USART1_SendString("\r\n");
-
-      /* Read app reset handler specifically — critical for Bootloader_Is_App_Valid */
-      uint32_t sp, rh;
-      W25Q_FastRead(16, (uint8_t*) &sp, 4); /* SP = body[0..3] */
-      W25Q_FastRead(16 + 4, (uint8_t*) &rh, 4); /* Reset handler = body[4..7] */
-      USART1_SendString("App SP    = ");
-      USART1_SendNumber(sp);
-      USART1_SendString("  (expect 536891392 = 0x20005000)\r\n");
-      USART1_SendString("App reset = ");
-      USART1_SendNumber(rh);
-      USART1_SendString("  (must have 0x08 in top byte)\r\n");
-
-      USART1_SendString("========================================\r\n\r\n");
-    }
-
     USART1_SendString("OTA Requested... Flashing...\r\n");
 
     ota_stream_t stream = { .read = ota_read_mem, .set_total_size = ota_mem_set_total_size };
