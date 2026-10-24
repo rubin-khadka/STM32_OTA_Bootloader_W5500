@@ -1,4 +1,9 @@
-import struct, zlib, sys, os
+#!/usr/bin/env python3
+
+import struct
+import zlib
+import sys
+import os
 
 APP_BIN = "STM32_Application_v1.0.bin"
 OUT_BIN = "combined.bin"

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import zlib
 import struct
 import socket
@@ -6,15 +7,15 @@ import time
 import os
 
 # Configuration
-OTA_MAGIC = 0xABCDEFAB      
+OTA_MAGIC   = 0xABCDEFAB      
 OTA_VERSION = 0x01
 
-APP_BIN = "STM32_Application_v2.0.bin"      # Input application binary
-OUTPUT_IMAGE = "ota_image.bin"              # Output OTA image with header
+APP_BIN         = "STM32_Application_v2.0.bin"      # Input application binary
+OUTPUT_IMAGE    = "ota_image.bin"              # Output OTA image with header
 
-SERVER_IP = "0.0.0.0"
+SERVER_IP   = "0.0.0.0"
 SERVER_PORT = 5678
-CHUNK_SIZE = 512
+CHUNK_SIZE  = 512
 CHUNK_DELAY = 0.25   # 250 ms
 
 START_CMD = b"GET firmware\n"     
@@ -26,13 +27,13 @@ def create_ota_image(input_file, output_file):
     with open(input_file, "rb") as f:
         app = f.read()
     
-    crc = zlib.crc32(app) & 0xFFFFFFFF
-    size = len(app)
+    crc     = zlib.crc32(app) & 0xFFFFFFFF
+    size    = len(app)
     
     hdr = struct.pack(
         "<IIII",
         OTA_MAGIC,              # magic
-        size,
+        size,                   # size
         crc,                    # CRC
         OTA_VERSION             # version
     )
@@ -66,8 +67,8 @@ def serve_ota_image(image_file):
     print(f"Received: {cmd.strip()}")
     print("Sending firmware...")
 
-    sent = 0
-    chunk_id = 0
+    sent        = 0
+    chunk_id    = 0
 
     while sent < file_size:
         chunk = firmware[sent:sent + CHUNK_SIZE]

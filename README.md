@@ -79,6 +79,11 @@ Flash Memory Map (STM32F103C8 - 64KB total)
 │    │  Bootloader                     (16KB)              │  │
 │    │  0x08000000 - 0x08003FFF                            │  │
 │    └─────────────────────────────────────────────────────┘  │
+│ 0x08004000                                                  |
+│    ┌─────────────────────────────────────────────────────┐  │
+│    │  Application Header             (1KB)               │  │
+│    │  0x08004000 - 0x080043FF                            │  │
+│    └─────────────────────────────────────────────────────┘  │
 │ 0x08004400                                                  │
 │    ┌─────────────────────────────────────────────────────┐  │
 │    │  Application Firmware           (47KB)              │  │
@@ -87,6 +92,7 @@ Flash Memory Map (STM32F103C8 - 64KB total)
 └─────────────────────────────────────────────────────────────┘
 ```
 - Bootloader starts at 0x08000000 (default vector table address)
+- Application header starts at 0x08004000
 - Application code starts at 0x08004400 with custom vector table remapping
 - Bootloader verifies CRC from header before jumping to the application
 
