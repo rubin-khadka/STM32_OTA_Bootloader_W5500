@@ -124,11 +124,11 @@ The bootloader uses the header information to:
 
 ## PC Server Script
 
-The Python script performs two main tasks:
+The Python script does everything in one run — it creates the OTA image and immediately starts the server, so you only need to provide the `.bin` file and run the script.
 
 ### 1. Creating the OTA Image
 
-The script reads the raw application binary (`application.bin`) and adds a 16-byte header containing:
+The script reads the raw application binary (`STM32_Application_v2.0.bin`) and adds a 16-byte header containing:
 - **Magic Number** (0xABCDEFAB) – Identifies valid firmware
 - **Image Size** – Length of the firmware in bytes
 - **CRC32** – Checksum calculated from the firmware
@@ -140,9 +140,9 @@ The output is saved as `ota_image.bin`.
 
 The script starts a TCP server that:
 - Listens on port 5678 for incoming connections
-- Waits for the "GET firmware" command from the STM32 client
-- Sends the complete OTA image in 512-byte chunks
-- Displays progress of each chunk sent
+- Waits for the `GET firmware` command from the STM32 client
+- Sends the OTA image in 512-byte chunks, waiting for an `'A'` ACK from the STM32 after each chunk before sending the next (30 s timeout)
+- Displays progress of each chunk sent and each ACK received
 
 ## CRC Calculation 
 
@@ -161,7 +161,8 @@ This polynomial (`0xEDB88320`) is the standard CRC-32 used in protocols like Eth
 
 ## OTA Update Flowchart
 
-<img width="1081" height="1104" alt="flow chart" src="https://github.com/user-attachments/assets/6cf2fa4c-92f4-4e1e-a4d5-d2d6c586ce5b" />
+<img width="1081" height="1104" alt="flow chart"
+     src="https://raw.githubusercontent.com/rubin-khadka/STM32_OTA_Bootloader_W5500/main/Assets/flow_diagram.png" />
 
 ## Related Projects 
 - [STM32_MicroSD_Cloud_Logger](https://github.com/rubin-khadka/STM32_MicroSD_Cloud_Logger)
@@ -180,8 +181,8 @@ This polynomial (`0xEDB88320`) is the standard CRC-32 used in protocols like Eth
 
 ## Project Status
 - **Status**: Complete
-- **Version**: v1.0
-- **Last Updated**: April 2026
+- **Version**: v1.1
+- **Last Updated**: October 2026
 
 ## Contact
 **Rubin Khadka Chhetri**  
