@@ -10,12 +10,11 @@
 #include "app_ota.h"
 #include "flash_operations.h"
 
-#define OTA_FLAG_START    1
+#define OTA_FLAG_REQUESTED  0x00000000UL
 
 void enable_ota_request(void)
 {
   HAL_FLASH_Unlock();
-  flash_erase_header();
-  HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, APP_HEADER_ADDR, (uint64_t)OTA_FLAG_START);
+  flash_write_word(APP_HEADER_ADDR, OTA_FLAG_REQUESTED);
   HAL_FLASH_Lock();
 }

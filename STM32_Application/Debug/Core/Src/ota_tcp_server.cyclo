@@ -8,7 +8,7 @@
 ../Core/Src/ota_tcp_server.c:434:8:OTA_Client_Init	10
 ../Core/Src/ota_tcp_server.c:520:6:OTA_Client_Task	18
 ../Core/Src/ota_tcp_server.c:613:6:ota_start	6
-../Core/Src/ota_tcp_server.c:741:13:uart_puts	3
-../Core/Src/ota_tcp_server.c:750:13:uart_put_u32	3
-../Core/Src/ota_tcp_server.c:760:13:ota_finalize	10
-../Core/Src/ota_tcp_server.c:885:13:ota_error	1
+../Core/Src/ota_tcp_server.c:699:13:uart_puts	3
+../Core/Src/ota_tcp_server.c:708:13:uart_put_u32	3
+../Core/Src/ota_tcp_server.c:718:13:ota_finalize	10
+../Core/Src/ota_tcp_server.c:836:13:ota_error	1
