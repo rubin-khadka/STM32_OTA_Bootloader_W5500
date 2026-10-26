@@ -8,7 +8,7 @@
 ../Core/Src/ota_tcp_server.c:434:8:OTA_Client_Init	32	static
 ../Core/Src/ota_tcp_server.c:520:6:OTA_Client_Task	48	static
 ../Core/Src/ota_tcp_server.c:613:6:ota_start	16	static
-../Core/Src/ota_tcp_server.c:741:13:uart_puts	16	static
-../Core/Src/ota_tcp_server.c:750:13:uart_put_u32	48	static
-../Core/Src/ota_tcp_server.c:760:13:ota_finalize	80	static,ignoring_inline_asm
-../Core/Src/ota_tcp_server.c:885:13:ota_error	8	static
+../Core/Src/ota_tcp_server.c:698:13:uart_puts	16	static
+../Core/Src/ota_tcp_server.c:707:13:uart_put_u32	48	static
+../Core/Src/ota_tcp_server.c:717:13:ota_finalize	56	static,ignoring_inline_asm
+../Core/Src/ota_tcp_server.c:835:13:ota_error	8	static

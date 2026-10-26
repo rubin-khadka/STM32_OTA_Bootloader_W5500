@@ -1,6 +1,6 @@
 ../Core/Src/flash_operations.c:14:10:flash_read_ota_flag	1
 ../Core/Src/flash_operations.c:20:10:flash_erase_app	1
-../Core/Src/flash_operations.c:49:10:flash_erase_header	3
-../Core/Src/flash_operations.c:66:10:flash_write_word_checked	2
-../Core/Src/flash_operations.c:73:6:flash_write_word	1
-../Core/Src/flash_operations.c:78:6:flash_write_bytes	4
+../Core/Src/flash_operations.c:36:10:flash_erase_header	3
+../Core/Src/flash_operations.c:53:10:flash_write_word_checked	2
+../Core/Src/flash_operations.c:60:6:flash_write_word	1
+../Core/Src/flash_operations.c:65:6:flash_write_bytes	4
