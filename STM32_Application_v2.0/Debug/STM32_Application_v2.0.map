@@ -137,9 +137,9 @@ Discarded input sections
  .data          0x00000000        0x0 ./Core/Src/app_ota.o
  .bss           0x00000000        0x0 ./Core/Src/app_ota.o
  .text.enable_ota_request
-                0x00000000       0x28 ./Core/Src/app_ota.o
- .debug_info    0x00000000      0x130 ./Core/Src/app_ota.o
- .debug_abbrev  0x00000000       0xba ./Core/Src/app_ota.o
+                0x00000000       0x1c ./Core/Src/app_ota.o
+ .debug_info    0x00000000      0x102 ./Core/Src/app_ota.o
+ .debug_abbrev  0x00000000       0xa3 ./Core/Src/app_ota.o
  .debug_aranges
                 0x00000000       0x20 ./Core/Src/app_ota.o
  .debug_rnglists
@@ -183,8 +183,8 @@ Discarded input sections
  .debug_macro   0x00000000       0x83 ./Core/Src/app_ota.o
  .debug_macro   0x00000000       0x28 ./Core/Src/app_ota.o
  .debug_macro   0x00000000       0x10 ./Core/Src/app_ota.o
- .debug_line    0x00000000      0x6c3 ./Core/Src/app_ota.o
- .debug_str     0x00000000    0x7c3cc ./Core/Src/app_ota.o
+ .debug_line    0x00000000      0x6c2 ./Core/Src/app_ota.o
+ .debug_str     0x00000000    0x7c3b3 ./Core/Src/app_ota.o
  .comment       0x00000000       0x44 ./Core/Src/app_ota.o
  .debug_frame   0x00000000       0x2c ./Core/Src/app_ota.o
  .ARM.attributes
