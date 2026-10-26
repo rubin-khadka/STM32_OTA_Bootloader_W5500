@@ -97,8 +97,6 @@ void bl_flash_write_app_header(uint32_t magic, uint32_t size, uint32_t crc, uint
 
   HAL_FLASH_Unlock();
 
-  flash_erase_header();
-
   uint32_t *p = (uint32_t*) &hdr;
   uint32_t addr = APP_HEADER_ADDR;
 
@@ -113,6 +111,9 @@ void bl_flash_write_app_header(uint32_t magic, uint32_t size, uint32_t crc, uint
 /* OTA Core Functions */
 void bl_ota_begin(bl_ota_ctx_t *ctx, uint32_t image_size, uint32_t expected_crc)
 {
+  HAL_FLASH_Unlock();
+  flash_erase_header();
+  HAL_FLASH_Lock();
   bl_flash_erase_app();
 
   /* Sanity: erase must have produced 0xFFFFFFFF at the app start */

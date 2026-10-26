@@ -7,7 +7,7 @@
 ../Core/Src/bl_ota.c:73:5:check_ota_request	8	static
 ../Core/Src/bl_ota.c:80:10:bl_flash_erase_app	16	static
 ../Core/Src/bl_ota.c:88:6:bl_flash_write_app_header	56	static
-../Core/Src/bl_ota.c:114:6:bl_ota_begin	24	static
-../Core/Src/bl_ota.c:133:5:bl_ota_write_chunk	48	static,ignoring_inline_asm
-../Core/Src/bl_ota.c:172:5:bl_ota_finalize	24	static
-../Core/Src/bl_ota.c:200:5:bl_ota_run	304	static
+../Core/Src/bl_ota.c:112:6:bl_ota_begin	24	static
+../Core/Src/bl_ota.c:134:5:bl_ota_write_chunk	48	static,ignoring_inline_asm
+../Core/Src/bl_ota.c:173:5:bl_ota_finalize	24	static
+../Core/Src/bl_ota.c:201:5:bl_ota_run	304	static
