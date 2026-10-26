@@ -17,7 +17,6 @@
  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include <bl_ota.h>
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -25,7 +24,7 @@
 #include "bl_jump.h"
 #include "w25q64.h"
 #include "bl_backup.h"
-
+#include "bl_ota.h"
 #include "usart1.h"
 /* USER CODE END Includes */
 

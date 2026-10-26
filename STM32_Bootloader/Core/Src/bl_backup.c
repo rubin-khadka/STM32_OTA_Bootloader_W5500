@@ -168,7 +168,6 @@ bl_backup_status_t bl_restore_from_backup(void)
   /* 3. Erase internal header page + app pages under one unlock */
   USART1_SendString("[RST] Erasing internal flash...\r\n");
   HAL_FLASH_Unlock();
-  flash_erase_header();
   flash_erase_app();
   HAL_FLASH_Lock();
 

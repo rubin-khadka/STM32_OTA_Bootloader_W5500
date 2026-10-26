@@ -1,7 +1,7 @@
-../Core/Src/main.c:68:6:ota_mem_set_total_size	1
-../Core/Src/main.c:73:5:ota_read_mem	2
-../Core/Src/main.c:89:5:main	16
-../Core/Src/main.c:245:6:SystemClock_Config	3
-../Core/Src/main.c:284:13:MX_SPI2_Init	2
-../Core/Src/main.c:322:13:MX_GPIO_Init	1
-../Core/Src/main.c:357:6:Error_Handler	1
+../Core/Src/main.c:67:6:ota_mem_set_total_size	1
+../Core/Src/main.c:72:5:ota_read_mem	2
+../Core/Src/main.c:88:5:main	16
+../Core/Src/main.c:244:6:SystemClock_Config	3
+../Core/Src/main.c:283:13:MX_SPI2_Init	2
+../Core/Src/main.c:321:13:MX_GPIO_Init	1
+../Core/Src/main.c:356:6:Error_Handler	1

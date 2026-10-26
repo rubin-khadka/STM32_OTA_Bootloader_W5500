@@ -5,20 +5,17 @@
  *      Author: Rubin Khadka
  */
 
-#include <bl_ota.h>
-#include <flash_layout.h>
+#include "bl_ota.h"
+#include "flash_layout.h"
 #include "main.h"
 #include "flash_operations.h"
 #include "app_header.h"
 #include <string.h>
 
-#define OTA_FLAG_START    1
-#define CRC32_POLY        0xEDB88320
+#define OTA_FLAG_CLEAR      0xFFFFFFFFUL
+#define CRC32_POLY          0xEDB88320
 
-/* ────────────────────────────────────────────────────────────── */
-/* compact logging helpers (direct-register UART, no ISR)        */
-/* ────────────────────────────────────────────────────────────── */
-
+/* Helper Functions */
 static void log_str(const char *s)
 {
   while(*s)
@@ -46,10 +43,7 @@ static void log_nl(void)
   USART1->DR = '\n';
 }
 
-/* ────────────────────────────────────────────────────────────── */
-/* CRC32                                                         */
-/* ────────────────────────────────────────────────────────────── */
-
+/* CRC32 */
 void bl_crc_init(uint32_t *crc)
 {
   *crc = 0xFFFFFFFF;
@@ -75,13 +69,10 @@ uint32_t bl_crc_finalize(uint32_t crc)
   return crc ^ 0xFFFFFFFF;
 }
 
-/* ────────────────────────────────────────────────────────────── */
-/* flash helpers                                                 */
-/* ────────────────────────────────────────────────────────────── */
-
+/* Flash Helpers*/
 int check_ota_request(void)
 {
-  if(flash_read_ota_flag() == OTA_FLAG_START)
+  if(flash_read_ota_flag() != OTA_FLAG_CLEAR)
     return 0;
   return 1;
 }
@@ -98,13 +89,15 @@ void bl_flash_write_app_header(uint32_t magic, uint32_t size, uint32_t crc, uint
 {
   app_header_t hdr;
 
-  hdr.ota_flag = 0;
-  hdr.magic = APP_MAGIC;
-  hdr.size = size;
-  hdr.crc = crc;
-  hdr.version = version;
+  hdr.ota_flag = OTA_FLAG_CLEAR;
+  hdr.magic    = APP_MAGIC;
+  hdr.size     = size;
+  hdr.crc      = crc;
+  hdr.version  = version;
 
   HAL_FLASH_Unlock();
+
+  flash_erase_header();
 
   uint32_t *p = (uint32_t*) &hdr;
   uint32_t addr = APP_HEADER_ADDR;
@@ -117,10 +110,7 @@ void bl_flash_write_app_header(uint32_t magic, uint32_t size, uint32_t crc, uint
   HAL_FLASH_Lock();
 }
 
-/* ────────────────────────────────────────────────────────────── */
-/* OTA core                                                      */
-/* ────────────────────────────────────────────────────────────── */
-
+/* OTA Core Functions */
 void bl_ota_begin(bl_ota_ctx_t *ctx, uint32_t image_size, uint32_t expected_crc)
 {
   bl_flash_erase_app();

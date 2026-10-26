@@ -14,11 +14,11 @@ int check_ota_request(void);
 
 typedef struct
 {
-  uint32_t write_addr; /* Current flash write address */
-  uint32_t total_received; /* Bytes written so far */
-  uint32_t image_size; /* Expected firmware size */
-  uint32_t expected_crc; /* Expected final CRC */
-  uint32_t running_crc; /* CRC accumulator */
+  uint32_t write_addr;      /* Current flash write address */
+  uint32_t total_received;  /* Bytes written so far */
+  uint32_t image_size;      /* Expected firmware size */
+  uint32_t expected_crc;    /* Expected final CRC */
+  uint32_t running_crc;     /* CRC accumulator */
 } bl_ota_ctx_t;
 
 typedef struct
